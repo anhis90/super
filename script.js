@@ -23,15 +23,21 @@ let promos = [
   { id: 2, text: '15% de descuento en Lácteos los Miércoles' }
 ];
 
+let transactions = [];
+
 // --- Initialize ---
 document.addEventListener('DOMContentLoaded', () => {
   updateDate();
   setInterval(updateDate, 1000);
   
+  // load transactions
+  transactions = JSON.parse(localStorage.getItem('pos_transactions')) || [];
+  
   populateProductTable();
   renderPaymentMethods();
   renderDiscountRules();
   renderPromos();
+  updateDashboardAndTransactions();
   
   const codeInput = document.getElementById('product-code');
   const addBtn = document.getElementById('add-btn');
@@ -330,18 +336,33 @@ function confirmPayment() {
   
   const pmSelect = document.getElementById('payment-method');
   let pmDiscount = 0;
+  let paymentMethodName = 'No especificado';
   if(pmSelect) {
     const r = paymentRules.find(rule => rule.id === pmSelect.value);
-    if(r) pmDiscount = r.discount;
+    if(r) {
+      pmDiscount = r.discount;
+      paymentMethodName = r.name;
+    }
   }
   
   const totalDiscountPercent = globalDiscount + pmDiscount;
   const discountAmount = subtotal * (totalDiscountPercent / 100);
   const total = subtotal - discountAmount;
   
+  // Save transaction
+  const tx = {
+    date: new Date().toLocaleString(),
+    itemsCount: cart.reduce((a,b)=>a+b.qty, 0),
+    total: total,
+    paymentMethod: paymentMethodName
+  };
+  transactions.push(tx);
+  localStorage.setItem('pos_transactions', JSON.stringify(transactions));
+  updateDashboardAndTransactions();
+  
   const summaryBox = document.getElementById('receipt-summary');
   summaryBox.innerHTML = `
-    <p><span>Artículos:</span> <span>${cart.reduce((a,b)=>a+b.qty, 0)}</span></p>
+    <p><span>Artículos:</span> <span>${tx.itemsCount}</span></p>
     <p><span>Subtotal:</span> <span>$${subtotal.toFixed(2)}</span></p>
     ${totalDiscountPercent > 0 ? `<p><span>Descuento:</span> <span>-$${discountAmount.toFixed(2)}</span></p>` : ''}
     <p class="total-p"><span>Total Pagado:</span> <span>$${total.toFixed(2)}</span></p>
@@ -364,8 +385,41 @@ function finishCheckout() {
   document.getElementById('product-code').value = '';
   document.getElementById('global-discount').value = '';
   closePopups();
+}
+
+// --- History and Dashboard ---
+function updateDashboardAndTransactions() {
+  const opStat = document.getElementById('dashboard-operaciones');
+  const salesStat = document.getElementById('dashboard-ventas-dia');
+  const factTotal = document.getElementById('facturacion-total');
+  const tbody = document.getElementById('transactions-table-body');
   
-  // update operations stat purely visual
-  const opStat = document.querySelectorAll('.stat-card p')[1];
-  if(opStat) opStat.textContent = parseInt(opStat.textContent) + 1;
+  if(opStat) opStat.textContent = transactions.length;
+  
+  const totalMoney = transactions.reduce((sum, tx) => sum + tx.total, 0);
+  if(salesStat) salesStat.textContent = `$${totalMoney.toFixed(2)}`;
+  if(factTotal) factTotal.textContent = `$${totalMoney.toFixed(2)}`;
+  
+  if(tbody) {
+    tbody.innerHTML = '';
+    // Show newest first
+    const reversed = [...transactions].reverse();
+    reversed.forEach(tx => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${tx.date}</td>
+        <td>${tx.paymentMethod}</td>
+        <td>$${tx.total.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+function clearTransactions() {
+  if(confirm("¿Está seguro de querer borrar todo el historial?")) {
+    transactions = [];
+    localStorage.removeItem('pos_transactions');
+    updateDashboardAndTransactions();
+  }
 }

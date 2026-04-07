@@ -95,11 +95,11 @@
       <div class="dashboard-stats">
         <div class="stat-card">
           <h3>Ventas del Día</h3>
-          <p>$0.00</p>
+          <p id="dashboard-ventas-dia">$0.00</p>
         </div>
         <div class="stat-card">
           <h3>Operaciones</h3>
-          <p>0</p>
+          <p id="dashboard-operaciones">0</p>
         </div>
       </div>
     </div>
@@ -153,8 +153,25 @@
       <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
     </div>
     <div class="popup-body">
-      <p>Gestión de comprobantes y facturas electrónicas.</p>
-      <button class="action-btn">Generar Reporte Z</button>
+      <div class="dashboard-stats" style="margin-bottom: 20px;">
+        <div class="stat-card">
+          <h3>Total Recaudado</h3>
+          <p id="facturacion-total" style="color: var(--success);">$0.00</p>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>M. de Pago</th>
+            <th>Monto</th>
+          </tr>
+        </thead>
+        <tbody id="transactions-table-body">
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+      <button class="action-btn" style="margin-top:20px; background-color: var(--danger);" onclick="clearTransactions()">Limpiar Historial</button>
     </div>
   </div>
 
