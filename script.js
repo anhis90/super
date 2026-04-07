@@ -19,8 +19,7 @@ let paymentRules = [
 ];
 
 let promos = [
-  { id: 1, text: 'Llevá 3, pagá 2 en Gaseosas' },
-  { id: 2, text: '15% de descuento en Lácteos los Miércoles' }
+  { id: 1, type: 'NxM', code: '004', take: 3, pay: 2, text: 'Promoción: 3x2 en Gaseosa Cola (Cod: 004)' }
 ];
 
 let transactions = [];
@@ -121,17 +120,28 @@ function renderCart() {
   cartContainer.innerHTML = '';
   
   let subtotal = 0;
+  let totalPromoDiscount = 0;
 
   cart.forEach((item, index) => {
-    const itemTotal = item.product.price * item.qty;
+    let itemTotal = item.product.price * item.qty;
     subtotal += itemTotal;
+    
+    let promoDiscThisItem = 0;
+    const applicablePromo = promos.find(p => p.type === 'NxM' && p.code === item.product.code);
+    if(applicablePromo && applicablePromo.take <= item.qty) {
+      const freeGroups = Math.floor(item.qty / applicablePromo.take);
+      const itemsFreePerGroup = applicablePromo.take - applicablePromo.pay;
+      promoDiscThisItem = freeGroups * itemsFreePerGroup * item.product.price;
+    }
+    totalPromoDiscount += promoDiscThisItem;
     
     const cartItem = document.createElement('div');
     cartItem.className = 'cart-item';
     cartItem.innerHTML = `
       <div class="item-info">
         <span class="item-name">${item.product.name}</span>
-        <span class="item-price">$${item.product.price.toFixed(2)} x ${item.qty} = $${itemTotal.toFixed(2)}</span>
+        <span class="item-price">$${item.product.price.toFixed(2)} x ${item.qty} = $${itemTotal.toFixed(2)} 
+        ${promoDiscThisItem > 0 ? `<br><small style="color:var(--success)">Ahorro promo: -$${promoDiscThisItem.toFixed(2)}</small>` : ''}</span>
       </div>
       <div class="item-actions">
         <span class="qty">${item.qty}</span>
@@ -141,7 +151,7 @@ function renderCart() {
     cartContainer.appendChild(cartItem);
   });
 
-  updateTotals(subtotal);
+  updateTotals(subtotal, totalPromoDiscount);
 }
 
 function removeItem(index) {
@@ -149,7 +159,7 @@ function removeItem(index) {
   renderCart();
 }
 
-function updateTotals(subtotal) {
+function updateTotals(subtotal, totalPromoDiscount = 0) {
   const pmSelect = document.getElementById('payment-method');
   let pmDiscount = 0;
   if(pmSelect) {
@@ -158,15 +168,17 @@ function updateTotals(subtotal) {
   }
   
   const totalDiscountPercent = globalDiscount + pmDiscount;
-  const discountAmount = subtotal * (totalDiscountPercent / 100);
+  let discountAmount = subtotal * (totalDiscountPercent / 100);
+  
+  discountAmount += totalPromoDiscount; // add item-level promos
   const total = subtotal - discountAmount;
 
   document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
   
   const discountRow = document.getElementById('discount-row');
-  if (totalDiscountPercent > 0) {
+  if (discountAmount > 0) {
     discountRow.style.display = 'flex';
-    document.getElementById('discount-percent').textContent = totalDiscountPercent;
+    document.getElementById('discount-percent').textContent = totalDiscountPercent > 0 ? totalDiscountPercent : 'Promos';
     document.getElementById('discount-amount').textContent = `-$${discountAmount.toFixed(2)}`;
   } else {
     discountRow.style.display = 'none';
@@ -255,17 +267,33 @@ function renderPromos() {
 }
 
 function addPromotion() {
-  const text = document.getElementById('new-promo-text').value;
-  if(text) {
-    promos.push({ id: Date.now(), text });
+  const code = document.getElementById('promo-code').value;
+  const take = parseInt(document.getElementById('promo-take').value);
+  const pay = parseInt(document.getElementById('promo-pay').value);
+  
+  if (code && !isNaN(take) && !isNaN(pay) && take > pay) {
+    const p = products.find(prod => prod.code === code);
+    if (!p) {
+      alert('El código del producto no existe en la base de datos.');
+      return;
+    }
+    const text = `Promoción: ${take}x${pay} en ${p.name} (Cod: ${code})`;
+    promos.push({ id: Date.now(), type: 'NxM', code, take, pay, text });
     renderPromos();
-    document.getElementById('new-promo-text').value = '';
+    renderCart(); // recalculate promos
+    
+    document.getElementById('promo-code').value = '';
+    document.getElementById('promo-take').value = '';
+    document.getElementById('promo-pay').value = '';
+  } else {
+    alert('Ingrese un código válido y valores correctos (Llevá > Pagá)');
   }
 }
 
 function removePromotion(id) {
   promos = promos.filter(p => p.id !== id);
   renderPromos();
+  renderCart();
 }
 
 // --- Popups Handling ---
@@ -330,8 +358,20 @@ function confirmPayment() {
   document.getElementById('payment-modal').classList.remove('active');
   
   let subtotal = 0;
+  let totalPromoDiscount = 0;
+  
   cart.forEach(item => {
-    subtotal += item.product.price * item.qty;
+    let itemTotal = item.product.price * item.qty;
+    subtotal += itemTotal;
+    
+    let promoDiscThisItem = 0;
+    const applicablePromo = promos.find(p => p.type === 'NxM' && p.code === item.product.code);
+    if(applicablePromo && applicablePromo.take <= item.qty) {
+      const freeGroups = Math.floor(item.qty / applicablePromo.take);
+      const itemsFreePerGroup = applicablePromo.take - applicablePromo.pay;
+      promoDiscThisItem = freeGroups * itemsFreePerGroup * item.product.price;
+    }
+    totalPromoDiscount += promoDiscThisItem;
   });
   
   const pmSelect = document.getElementById('payment-method');
@@ -346,7 +386,8 @@ function confirmPayment() {
   }
   
   const totalDiscountPercent = globalDiscount + pmDiscount;
-  const discountAmount = subtotal * (totalDiscountPercent / 100);
+  let discountAmount = subtotal * (totalDiscountPercent / 100);
+  discountAmount += totalPromoDiscount;
   const total = subtotal - discountAmount;
   
   // Save transaction

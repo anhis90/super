@@ -233,9 +233,11 @@
     </div>
     <div class="popup-body">
       <div class="add-item-form">
-        <h3>Agregar Promoción</h3>
+        <h3>Agregar Promoción (Llevá N, Pagá M)</h3>
         <div class="input-inline">
-          <input type="text" id="new-promo-text" placeholder="Ej: Llevá 3 pagá 2 en Gaseosas">
+          <input type="text" id="promo-code" placeholder="Código (Ej: 001)" style="flex: 1 1 80px;">
+          <input type="number" id="promo-take" placeholder="Llevá (N)" min="1" style="flex: 1 1 80px;">
+          <input type="number" id="promo-pay" placeholder="Pagá (M)" min="1" style="flex: 1 1 80px;">
           <button class="action-btn" onclick="addPromotion()"><i class="ri-add-line"></i> Añadir</button>
         </div>
       </div>
