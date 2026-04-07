@@ -1,5 +1,5 @@
 // --- Data ---
-const products = [
+let products = JSON.parse(localStorage.getItem('pos_products')) || [
   { code: '001', name: 'Leche Descremada 1L', price: 1200, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=200&q=80' },
   { code: '002', name: 'Pan Lactal Blanco', price: 950, image: 'https://images.unsplash.com/photo-1598373182133-52452f7691ef?auto=format&fit=crop&w=200&q=80' },
   { code: '003', name: 'Queso Cremoso x Kg', price: 4500, image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?auto=format&fit=crop&w=200&q=80' },
@@ -11,18 +11,19 @@ const products = [
 let cart = [];
 let globalDiscount = 0;
 
-let paymentRules = [
+let paymentRules = JSON.parse(localStorage.getItem('pos_payment_rules')) || [
   { id: 'efectivo', name: 'Efectivo', discount: 10 },
   { id: 'debito', name: 'Tarjeta de Débito', discount: 0 },
   { id: 'credito', name: 'Tarjeta de Crédito', discount: 0 },
   { id: 'mercadopago', name: 'Mercado Pago (QR)', discount: 0 }
 ];
 
-let promos = [
+let promos = JSON.parse(localStorage.getItem('pos_promos')) || [
   { id: 1, type: 'NxM', code: '004', take: 3, pay: 2, text: 'Promoción: 3x2 en Gaseosa Cola (Cod: 004)' }
 ];
 
 let transactions = [];
+let openingCash = parseFloat(localStorage.getItem('pos_opening_cash')) || 0;
 
 // --- Initialize ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -41,19 +42,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const codeInput = document.getElementById('product-code');
   const addBtn = document.getElementById('add-btn');
 
-  codeInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      addProductToCart(codeInput.value);
-    }
-  });
+  if (codeInput) {
+    codeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addProductToCart(codeInput.value);
+      }
+    });
+  }
 
-  addBtn.addEventListener('click', () => {
-    addProductToCart(codeInput.value);
-  });
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      addProductToCart(codeInput.value);
+    });
+  }
 });
 
 function updateDate() {
   const dateDisplay = document.getElementById('date-display');
+  if (!dateDisplay) return;
   const now = new Date();
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' };
   dateDisplay.textContent = now.toLocaleDateString('es-ES', options);
@@ -75,11 +81,13 @@ function addProductToCart(code) {
     showProductPreview(product);
     renderCart();
     
-    codeInput.value = '';
-    codeInput.focus();
+    if (codeInput) {
+      codeInput.value = '';
+      codeInput.focus();
+    }
   } else {
     alert('Producto no encontrado!');
-    codeInput.select();
+    if (codeInput) codeInput.select();
   }
 }
 
@@ -94,6 +102,7 @@ function addNewProduct() {
       return;
     }
     products.push({ code, name, price, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80' });
+    localStorage.setItem('pos_products', JSON.stringify(products));
     populateProductTable();
     document.getElementById('new-prod-code').value = '';
     document.getElementById('new-prod-name').value = '';
@@ -106,6 +115,7 @@ function addNewProduct() {
 
 function showProductPreview(product) {
   const previewContainer = document.getElementById('product-preview');
+  if (!previewContainer) return;
   previewContainer.innerHTML = `
     <div class="scanned-product">
       <img src="${product.image}" alt="${product.name}">
@@ -117,6 +127,7 @@ function showProductPreview(product) {
 
 function renderCart() {
   const cartContainer = document.getElementById('cart-items');
+  if (!cartContainer) return;
   cartContainer.innerHTML = '';
   
   let subtotal = 0;
@@ -173,18 +184,24 @@ function updateTotals(subtotal, totalPromoDiscount = 0) {
   discountAmount += totalPromoDiscount; // add item-level promos
   const total = subtotal - discountAmount;
 
-  document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+  const subtotalEl = document.getElementById('subtotal');
+  if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
   
   const discountRow = document.getElementById('discount-row');
-  if (discountAmount > 0) {
-    discountRow.style.display = 'flex';
-    document.getElementById('discount-percent').textContent = totalDiscountPercent > 0 ? totalDiscountPercent : 'Promos';
-    document.getElementById('discount-amount').textContent = `-$${discountAmount.toFixed(2)}`;
-  } else {
-    discountRow.style.display = 'none';
+  if (discountRow) {
+    if (discountAmount > 0) {
+      discountRow.style.display = 'flex';
+      const discPercentEl = document.getElementById('discount-percent');
+      const discAmountEl = document.getElementById('discount-amount');
+      if (discPercentEl) discPercentEl.textContent = totalDiscountPercent > 0 ? totalDiscountPercent : 'Promos';
+      if (discAmountEl) discAmountEl.textContent = `-$${discountAmount.toFixed(2)}`;
+    } else {
+      discountRow.style.display = 'none';
+    }
   }
 
-  document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+  const totalEl = document.getElementById('total');
+  if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
 }
 
 // --- Discounts ---
@@ -224,6 +241,7 @@ function addDiscountRule() {
   if(name && !isNaN(val)) {
     const id = name.toLowerCase().replace(/\s+/g, '');
     paymentRules.push({ id, name, discount: val });
+    localStorage.setItem('pos_payment_rules', JSON.stringify(paymentRules));
     renderDiscountRules();
     renderPaymentMethods();
     renderCart();
@@ -234,6 +252,7 @@ function addDiscountRule() {
 
 function removeDiscountRule(id) {
   paymentRules = paymentRules.filter(r => r.id !== id);
+  localStorage.setItem('pos_payment_rules', JSON.stringify(paymentRules));
   renderDiscountRules();
   renderPaymentMethods();
   renderCart();
@@ -241,6 +260,7 @@ function removeDiscountRule(id) {
 
 function applyDiscount() {
   const input = document.getElementById('global-discount');
+  if (!input) return;
   const val = parseFloat(input.value);
   if (!isNaN(val) && val >= 0 && val <= 100) {
     globalDiscount = val;
@@ -279,6 +299,7 @@ function addPromotion() {
     }
     const text = `Promoción: ${take}x${pay} en ${p.name} (Cod: ${code})`;
     promos.push({ id: Date.now(), type: 'NxM', code, take, pay, text });
+    localStorage.setItem('pos_promos', JSON.stringify(promos));
     renderPromos();
     renderCart(); // recalculate promos
     
@@ -292,6 +313,7 @@ function addPromotion() {
 
 function removePromotion(id) {
   promos = promos.filter(p => p.id !== id);
+  localStorage.setItem('pos_promos', JSON.stringify(promos));
   renderPromos();
   renderCart();
 }
@@ -318,6 +340,7 @@ function closePopups() {
 
 function populateProductTable() {
   const tbody = document.getElementById('product-table-body');
+  if (!tbody) return;
   tbody.innerHTML = '';
   products.forEach(p => {
     const tr = document.createElement('tr');
@@ -345,17 +368,18 @@ function openPaymentModal() {
   const qrContainer = document.getElementById('qr-container');
   
   if(pmSelect && pmSelect.value === 'mercadopago') {
-    qrContainer.style.display = 'block';
+    if (qrContainer) qrContainer.style.display = 'block';
   } else {
-    qrContainer.style.display = 'none';
+    if (qrContainer) qrContainer.style.display = 'none';
   }
   
-  overlay.classList.add('active');
-  pModal.classList.add('active');
+  if (overlay) overlay.classList.add('active');
+  if (pModal) pModal.classList.add('active');
 }
 
 function confirmPayment() {
-  document.getElementById('payment-modal').classList.remove('active');
+  const pModal = document.getElementById('payment-modal');
+  if (pModal) pModal.classList.remove('active');
   
   let subtotal = 0;
   let totalPromoDiscount = 0;
@@ -391,7 +415,9 @@ function confirmPayment() {
   const total = subtotal - discountAmount;
   
   // Save transaction
+  const txCode = 'TK-' + Math.floor(1000 + Math.random() * 9000);
   const tx = {
+    code: txCode,
     date: new Date().toLocaleString(),
     itemsCount: cart.reduce((a,b)=>a+b.qty, 0),
     total: total,
@@ -402,29 +428,37 @@ function confirmPayment() {
   updateDashboardAndTransactions();
   
   const summaryBox = document.getElementById('receipt-summary');
-  summaryBox.innerHTML = `
-    <p><span>Artículos:</span> <span>${tx.itemsCount}</span></p>
-    <p><span>Subtotal:</span> <span>$${subtotal.toFixed(2)}</span></p>
-    ${totalDiscountPercent > 0 ? `<p><span>Descuento:</span> <span>-$${discountAmount.toFixed(2)}</span></p>` : ''}
-    <p class="total-p"><span>Total Pagado:</span> <span>$${total.toFixed(2)}</span></p>
-  `;
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <p><span>Código:</span> <span>${tx.code}</span></p>
+      <p><span>Artículos:</span> <span>${tx.itemsCount}</span></p>
+      <p><span>Subtotal:</span> <span>$${subtotal.toFixed(2)}</span></p>
+      ${totalDiscountPercent > 0 || totalPromoDiscount > 0 ? `<p><span>Descuento:</span> <span>-$${discountAmount.toFixed(2)}</span></p>` : ''}
+      <p class="total-p"><span>Total Pagado:</span> <span>$${total.toFixed(2)}</span></p>
+    `;
+  }
   
   const modal = document.getElementById('checkout-modal');
-  setTimeout(() => modal.classList.add('active'), 10);
+  if (modal) setTimeout(() => modal.classList.add('active'), 10);
 }
 
 function finishCheckout() {
   cart = [];
   globalDiscount = 0;
   renderCart();
-  document.getElementById('product-preview').innerHTML = `
-    <div class="empty-state">
-      <i class="ri-barcode-box-line"></i>
-      <p>Esperando producto...</p>
-    </div>
-  `;
-  document.getElementById('product-code').value = '';
-  document.getElementById('global-discount').value = '';
+  const preview = document.getElementById('product-preview');
+  if (preview) {
+    preview.innerHTML = `
+      <div class="empty-state">
+        <i class="ri-barcode-box-line"></i>
+        <p>Esperando producto...</p>
+      </div>
+    `;
+  }
+  const codeInput = document.getElementById('product-code');
+  const globalDiscInput = document.getElementById('global-discount');
+  if (codeInput) codeInput.value = '';
+  if (globalDiscInput) globalDiscInput.value = '';
   closePopups();
 }
 
@@ -433,9 +467,11 @@ function updateDashboardAndTransactions() {
   const opStat = document.getElementById('dashboard-operaciones');
   const salesStat = document.getElementById('dashboard-ventas-dia');
   const factTotal = document.getElementById('facturacion-total');
+  const montoCambioDisplay = document.getElementById('dashboard-monto-cambio');
   const tbody = document.getElementById('transactions-table-body');
   
   if(opStat) opStat.textContent = transactions.length;
+  if(montoCambioDisplay) montoCambioDisplay.textContent = `$${openingCash.toFixed(2)}`;
   
   const totalMoney = transactions.reduce((sum, tx) => sum + tx.total, 0);
   if(salesStat) salesStat.textContent = `$${totalMoney.toFixed(2)}`;
@@ -448,6 +484,7 @@ function updateDashboardAndTransactions() {
     reversed.forEach(tx => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td>${tx.code}</td>
         <td>${tx.date}</td>
         <td>${tx.paymentMethod}</td>
         <td>$${tx.total.toFixed(2)}</td>
@@ -462,5 +499,20 @@ function clearTransactions() {
     transactions = [];
     localStorage.removeItem('pos_transactions');
     updateDashboardAndTransactions();
+  }
+}
+
+function setOpeningCash() {
+  const input = document.getElementById('opening-cash-input');
+  if (!input) return;
+  const val = parseFloat(input.value);
+  if (!isNaN(val)) {
+    openingCash = val;
+    localStorage.setItem('pos_opening_cash', openingCash);
+    updateDashboardAndTransactions();
+    input.value = '';
+    alert('Monto de cambio establecido correctamente.');
+  } else {
+    alert('Por favor, ingrese un monto válido.');
   }
 }

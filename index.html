@@ -102,6 +102,17 @@
           <p id="dashboard-operaciones">0</p>
         </div>
       </div>
+      <div class="stat-card" style="margin-top: 15px;">
+        <h3>Monto de Cambio (Apertura)</h3>
+        <p id="dashboard-monto-cambio">$0.00</p>
+      </div>
+      <div class="add-item-form" style="margin-top: 15px;">
+        <h3>Configurar Monto de Cambio</h3>
+        <div class="input-inline">
+          <input type="number" id="opening-cash-input" placeholder="Ej: 5000">
+          <button class="action-btn" onclick="setOpeningCash()">Establecer</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -162,6 +173,7 @@
       <table class="data-table">
         <thead>
           <tr>
+            <th>Código</th>
             <th>Fecha</th>
             <th>M. de Pago</th>
             <th>Monto</th>
