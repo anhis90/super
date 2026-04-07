@@ -47,8 +47,9 @@ body {
   background: var(--bg-app);
   background-attachment: fixed;
   color: var(--text-main);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .app-container {
@@ -590,3 +591,40 @@ header h1 {
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* Responsive Media Queries */
+@media (max-width: 1200px) {
+  .sidebar { width: 220px; padding: 30px 15px; }
+  .pos-grid { gap: 20px; }
+}
+
+@media (max-width: 1024px) {
+  .app-container { flex-direction: column; overflow-y: auto; height: auto; }
+  .sidebar { 
+    width: 100%; 
+    height: auto; 
+    flex-direction: row; 
+    padding: 15px 20px; 
+    border-right: none; 
+    border-bottom: 1px solid var(--glass-border); 
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .logo { margin-bottom: 0; margin-right: 30px; font-size: 20px; }
+  .nav-links { flex-direction: row; gap: 10px; }
+  .nav-links li button { padding: 10px 15px; white-space: nowrap; }
+  .nav-links li button span { display: none; }
+  
+  .main-content { padding: 20px; height: auto; overflow: visible; }
+  .pos-grid { flex-direction: column; height: auto; overflow: visible; }
+  .cart-section { min-height: 400px; }
+}
+
+@media (max-width: 768px) {
+  header h1 { font-size: 24px; }
+  .header-actions { gap: 10px; }
+  .logout-btn span { display: none; }
+  .scanned-product img { width: 180px; height: 180px; }
+  .scanned-product h3 { font-size: 24px; }
+  .scanned-product .price { font-size: 32px; }
+}
