@@ -320,7 +320,10 @@ function renderProductTable() {
             <td>${p.name}</td>
             <td>$${p.price}</td>
             <td class="${p.stock < 5 ? 'stock-low' : ''}">${p.stock}</td>
-            <td class="admin-only"><button class="btn-icon-red" onclick="deleteProduct('${p.code}')" title="Eliminar"><i class="ri-close-circle-fill"></i></button></td>
+            <td class="admin-only">
+                <button class="action-btn" style="padding: 5px 10px; font-size: 12px;" onclick="adjustStock('${p.code}')" title="Ajustar Stock"><i class="ri-edit-line"></i></button>
+                <button class="btn-icon-red" onclick="deleteProduct('${p.code}')" title="Eliminar"><i class="ri-close-circle-fill"></i></button>
+            </td>
         </tr>
     `).join('');
     updateUIByRole();
@@ -413,6 +416,16 @@ function deleteProduct(code) {
     if (confirm('Eliminar producto?')) {
         products = products.filter(p => p.code !== code);
         saveData(); renderProductTable();
+    }
+}
+
+function adjustStock(code) {
+    const p = products.find(prod => prod.code === code);
+    const newVal = prompt(`Ajustar stock para ${p.name}:`, p.stock);
+    if (newVal !== null) {
+        p.stock = parseInt(newVal) || 0;
+        saveData();
+        renderAll();
     }
 }
 
