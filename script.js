@@ -251,8 +251,8 @@ function showReceipt(tx) {
 }
 
 function finishCheckout() {
-    renderAll(); // Updates tables, stats AND cart
-    document.getElementById('payment-modal').classList.remove('active');
+    renderAll(); 
+    closePopups();
 }
 
 // --- Admin Modules ---
@@ -350,8 +350,13 @@ function renderStats() {
     document.getElementById('dashboard-low-stock').textContent = lowStock;
     document.getElementById('dashboard-low-stock').style.color = lowStock > 0 ? 'var(--danger)' : 'var(--success)';
     
+    // Caja Opening
+    const cajaOpeningEl = document.getElementById('caja-monto-apertura');
+    if (cajaOpeningEl) cajaOpeningEl.textContent = `$${openingCash.toFixed(2)}`;
+    
     // Reports
-    document.getElementById('report-income-total').textContent = `$${transactions.reduce((s,t)=>s+t.total,0).toFixed(2)}`;
+    const reportIncomeTotalEl = document.getElementById('report-income-total');
+    if (reportIncomeTotalEl) reportIncomeTotalEl.textContent = `$${transactions.reduce((s,t)=>s+t.total,0).toFixed(2)}`;
     
     // Top Products
     const salesMap = {};

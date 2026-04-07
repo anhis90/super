@@ -291,10 +291,10 @@
   </div>
 
   <div class="popup" id="checkout-modal">
-    <div class="popup-body" style="text-align: center; padding: 40px 20px;">
+    <div class="popup-header"><h2>¡Venta Registrada!</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
+    <div class="popup-body" style="text-align: center; padding: 20px;">
       <i class="ri-checkbox-circle-fill success-icon"></i>
-      <h2 style="margin: 20px 0;">¡Venta Registrada!</h2>
-      <div id="receipt-summary" style="font-family: 'Courier New', Courier, monospace; background: rgba(0,0,0,0.05); padding: 20px; border-radius: 15px; margin-bottom: 25px; text-align: left;"></div>
+      <div id="receipt-summary" style="font-family: 'Courier New', Courier, monospace; background: rgba(0,0,0,0.05); padding: 20px; border-radius: 15px; margin: 20px 0; text-align: left; max-height: 300px; overflow-y: auto;"></div>
       <div style="display: flex; gap: 15px;">
         <button class="action-btn" style="flex: 1;" onclick="finishCheckout()">Nueva Venta</button>
         <button class="action-btn" style="flex: 1; background: var(--primary);" onclick="window.print()"><i class="ri-printer-line"></i> Imprimir</button>
