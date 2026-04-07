@@ -313,7 +313,7 @@ function renderProductTable() {
             <td>${p.name}</td>
             <td>$${p.price}</td>
             <td class="${p.stock < 5 ? 'stock-low' : ''}">${p.stock}</td>
-            <td class="admin-only"><button onclick="deleteProduct('${p.code}')" style="color:red">X</button></td>
+            <td class="admin-only"><button class="btn-icon-red" onclick="deleteProduct('${p.code}')" title="Eliminar"><i class="ri-close-circle-fill"></i></button></td>
         </tr>
     `).join('');
     updateUIByRole();
@@ -321,7 +321,7 @@ function renderProductTable() {
 
 function renderSuppliers() {
     const tbody = document.getElementById('suppliers-table-body');
-    tbody.innerHTML = suppliers.map(s => `<tr><td>${s.name}</td><td>${s.contact}</td><td class="admin-only"><button>X</button></td></tr>`).join('');
+    tbody.innerHTML = suppliers.map(s => `<tr><td>${s.name}</td><td>${s.contact}</td><td class="admin-only"><button class="btn-icon-red" title="Eliminar"><i class="ri-close-circle-fill"></i></button></td></tr>`).join('');
 }
 
 function renderPurchases() {
@@ -353,7 +353,7 @@ function renderStats() {
 function renderTransactions() {
     const tbody = document.getElementById('transactions-table-body');
     tbody.innerHTML = [...transactions].reverse().map(t => `
-        <tr><td>${t.code}</td><td>${t.date}</td><td>${t.method}</td><td>$${t.total.toFixed(2)}</td><td class="admin-only"><button>X</button></td></tr>
+        <tr><td>${t.code}</td><td>${t.date}</td><td>${t.method}</td><td>$${t.total.toFixed(2)}</td><td class="admin-only"><button class="btn-icon-red" title="Anular"><i class="ri-close-circle-fill"></i></button></td></tr>
     `).join('');
 }
 
@@ -449,7 +449,7 @@ function addDiscountRule() {
 function renderDiscountRules() {
     const list = document.getElementById('discounts-list');
     if (!list) return;
-    list.innerHTML = paymentRules.map(r => `<li>${r.name} (${r.discount}%) <button onclick="removeDiscountRule('${r.id}')">X</button></li>`).join('');
+    list.innerHTML = paymentRules.map(r => `<li><span>${r.name} (${r.discount}%)</span> <button class="btn-icon-red" onclick="removeDiscountRule('${r.id}')" title="Eliminar"><i class="ri-close-circle-fill"></i></button></li>`).join('');
 }
 
 function removeDiscountRule(id) {
@@ -472,7 +472,7 @@ function addPromotion() {
 function renderPromos() {
     const list = document.getElementById('promo-list');
     if (!list) return;
-    list.innerHTML = promos.map(p => `<li>Llevá ${p.take}, Pagá ${p.pay} (Código: ${p.code}) <button onclick="removePromo(${p.id})">X</button></li>`).join('');
+    list.innerHTML = promos.map(p => `<li><span>Llevá ${p.take}, Pagá ${p.pay} (Código: ${p.code})</span> <button class="btn-icon-red" onclick="removePromo(${p.id})" title="Eliminar"><i class="ri-close-circle-fill"></i></button></li>`).join('');
 }
 
 function removePromo(id) {
