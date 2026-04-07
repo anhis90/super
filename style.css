@@ -331,6 +331,15 @@ header h1 {
   border-top: 1px solid var(--glass-border);
 }
 
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
 .summary-row.total {
   font-size: 36px;
   font-weight: 950;
