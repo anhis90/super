@@ -48,13 +48,13 @@ body {
   background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
-  overflow-x: hidden;
   overflow-y: auto;
 }
 
 .app-container {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
   backdrop-filter: var(--blur);
 }
 
@@ -123,7 +123,6 @@ body {
   display: flex;
   flex-direction: column;
   padding: 40px;
-  overflow: hidden;
 }
 
 header {
@@ -189,7 +188,6 @@ header h1 {
   display: flex;
   gap: 40px;
   flex: 1;
-  overflow: hidden;
 }
 
 .scanner-section {
@@ -410,7 +408,15 @@ header h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+}
+
+/* POS Layout Overhaul */
+.pos-grid {
+  display: flex;
+  gap: 40px;
+  flex: 1;
+  overflow: hidden;
 }
 
 .close-btn {

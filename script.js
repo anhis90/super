@@ -11,12 +11,15 @@ let currentUser = JSON.parse(localStorage.getItem('pos_user')) || null;
 let ivaConfig = parseFloat(localStorage.getItem('pos_iva')) || 21;
 let suppliers = JSON.parse(localStorage.getItem('pos_suppliers')) || [];
 let purchases = JSON.parse(localStorage.getItem('pos_purchases')) || [];
-let paymentRules = JSON.parse(localStorage.getItem('pos_payment_rules')) || [
-  { id: 'efectivo', name: 'Efectivo', discount: 10 },
-  { id: 'debito', name: 'Tarjeta de Débito', discount: 0 },
-  { id: 'credito', name: 'Tarjeta de Crédito', discount: 0 },
-  { id: 'mercadopago', name: 'Mercado Pago (QR)', discount: 0 }
-];
+let paymentRules = JSON.parse(localStorage.getItem('pos_payment_rules')) || [];
+if (paymentRules.length === 0) {
+  paymentRules = [
+    { id: 'efectivo', name: 'Efectivo', discount: 10 },
+    { id: 'debito', name: 'Tarjeta de Débito', discount: 0 },
+    { id: 'credito', name: 'Tarjeta de Crédito', discount: 0 },
+    { id: 'mercadopago', name: 'Mercado Pago (QR)', discount: 0 }
+  ];
+}
 let promos = JSON.parse(localStorage.getItem('pos_promos')) || [];
 let transactions = JSON.parse(localStorage.getItem('pos_transactions')) || [];
 let openingCash = parseFloat(localStorage.getItem('pos_opening_cash')) || 0;
@@ -199,7 +202,7 @@ function calculateTotals(subtotal) {
 
 // --- Payment & Checkout ---
 function openPaymentModal() {
-    if (!cart.length) return;
+    if (!cart.length) { alert('El carrito está vacío'); return; }
     const details = document.getElementById('payment-details');
     const total = document.getElementById('total').textContent;
     details.innerHTML = `<strong>Total a cobrar: ${total}</strong><br>Medio: ${document.getElementById('payment-method').value}`;
