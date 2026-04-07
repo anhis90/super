@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super POS</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="app-container">
+    <nav class="sidebar">
+      <div class="logo">Super<span>POS</span></div>
+      <ul class="nav-links">
+        <li><button onclick="openPopup('inicio')" title="Inicio"><i class="ri-home-4-line"></i> Inicio</button></li>
+        <li><button onclick="openPopup('lista')" title="Lista de Productos"><i class="ri-list-check"></i> Lista</button></li>
+        <li><button onclick="openPopup('ticket')" title="Impresión de Ticket"><i class="ri-printer-line"></i> Ticket</button></li>
+        <li><button onclick="openPopup('facturacion')" title="Administración de Facturación"><i class="ri-file-list-3-line"></i> Facturación</button></li>
+        <li><button onclick="openPopup('caja')" title="Egreso e Ingreso de Dinero"><i class="ri-wallet-3-line"></i> Caja</button></li>
+        <li><button onclick="openPopup('descuentos')" title="Ingreso de Descuentos"><i class="ri-percent-line"></i> Descuentos</button></li>
+        <li><button onclick="openPopup('promociones')" title="Promociones"><i class="ri-megaphone-line"></i> Promociones</button></li>
+      </ul>
+    </nav>
+
+    <main class="main-content">
+      <header>
+        <h1>Caja Registradora</h1>
+        <div class="current-date" id="date-display"></div>
+      </header>
+
+      <div class="pos-grid">
+        <div class="scanner-section">
+          <div class="input-group">
+            <input type="text" id="product-code" placeholder="Ingrese código del producto (ej: 001, 002)" autofocus>
+            <button id="add-btn"><i class="ri-add-line"></i> Agregar</button>
+          </div>
+          <div class="product-preview" id="product-preview">
+            <!-- Product preview will appear here -->
+            <div class="empty-state">
+              <i class="ri-barcode-box-line"></i>
+              <p>Esperando producto...</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="cart-section">
+          <div class="cart-header">
+            <h2>Carrito de Compra</h2>
+          </div>
+          <div class="cart-items" id="cart-items">
+            <!-- Cart items will be injected here -->
+          </div>
+          <div class="cart-summary">
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span id="subtotal">$0.00</span>
+            </div>
+            <div class="summary-row discount-row" id="discount-row" style="display: none;">
+              <span>Descuento (<span id="discount-percent">0</span>%):</span>
+              <span id="discount-amount">-$0.00</span>
+            </div>
+            <div class="summary-row total">
+              <span>Total:</span>
+              <span id="total">$0.00</span>
+            </div>
+            <button class="checkout-btn" onclick="checkout()"><i class="ri-shopping-cart-checkout-line"></i> Cobrar</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Popups -->
+  <div class="overlay" id="overlay" onclick="closePopups()"></div>
+
+  <div class="popup" id="popup-inicio">
+    <div class="popup-header">
+      <h2>Inicio</h2>
+      <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="popup-body">
+      <p>Bienvenido al sistema Super POS.</p>
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <h3>Ventas del Día</h3>
+          <p>$0.00</p>
+        </div>
+        <div class="stat-card">
+          <h3>Operaciones</h3>
+          <p>0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup" id="popup-lista">
+    <div class="popup-header">
+      <h2>Lista de Productos</h2>
+      <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="popup-body">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Precio</th>
+          </tr>
+        </thead>
+        <tbody id="product-table-body">
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="popup" id="popup-ticket">
+    <div class="popup-header">
+      <h2>Impresión de Ticket</h2>
+      <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="popup-body">
+      <p>Configure la impresora de tickets aquí.</p>
+      <button class="action-btn"><i class="ri-printer-line"></i> Imprimir Último Ticket</button>
+    </div>
+  </div>
+
+  <div class="popup" id="popup-facturacion">
+    <div class="popup-header">
+      <h2>Administración de Facturación</h2>
+      <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="popup-body">
+      <p>Gestión de comprobantes y facturas electrónicas.</p>
+      <button class="action-btn">Generar Reporte Z</button>
+    </div>
+  </div>
+
+  <div class="popup" id="popup-caja">
+    <div class="popup-header">
+      <h2>Egreso e Ingreso de Dinero</h2>
+      <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="popup-body">
+      <div class="form-group">
+        <label>Tipo de Operación</label>
+        <select>
+          <option>Ingreso</option>
+          <option>Egreso</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Monto</label>
+        <input type="number" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Motivo</label>
+        <input type="text" placeholder="Ej: Cambio chico">
+      </div>
+      <button class="action-btn">Registrar</button>
+    </div>
+  </div>
+
+  <div class="popup" id="popup-descuentos">
+    <div class="popup-header">
+      <h2>Ingreso de Descuentos</h2>
+      <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="popup-body">
+      <div class="form-group">
+        <label>Descuento al subtotal (%)</label>
+        <input type="number" id="global-discount" placeholder="Ej: 10" min="0" max="100">
+      </div>
+      <button class="action-btn" onclick="applyDiscount()">Aplicar Descuento</button>
+    </div>
+  </div>
+
+  <div class="popup" id="popup-promociones">
+    <div class="popup-header">
+      <h2>Promociones</h2>
+      <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="popup-body">
+      <p>Ofertas vigentes:</p>
+      <ul class="promo-list">
+        <li>Llevá 3, pagá 2 en Gaseosas</li>
+        <li>15% de descuento en Lácteos los Miércoles</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Checkout Success Popup -->
+  <div class="overlay" id="checkout-overlay"></div>
+  <div class="checkout-modal" id="checkout-modal">
+    <i class="ri-checkbox-circle-fill success-icon"></i>
+    <h2>Cobro Exitoso</h2>
+    <p>El pago se ha procesado correctamente.</p>
+    <div class="receipt-summary" id="receipt-summary"></div>
+    <button class="action-btn" onclick="finishCheckout()">Nueva Venta</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
