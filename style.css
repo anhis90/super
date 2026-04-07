@@ -110,9 +110,39 @@ header {
   margin-bottom: 20px;
 }
 
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 header h1 {
   font-size: 28px;
   font-weight: 600;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.icon-btn i {
+  font-size: 20px;
 }
 
 .current-date {

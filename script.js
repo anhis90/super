@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('dark');
     const toggleBtn = document.getElementById('theme-toggle');
     if (toggleBtn) {
-      toggleBtn.innerHTML = '<i class="ri-sun-line"></i> <span>Modo Día</span>';
+      toggleBtn.innerHTML = '<i class="ri-sun-line"></i>';
     }
   }
 
@@ -535,12 +535,12 @@ function toggleDarkMode() {
   if (body.classList.contains('dark')) {
     localStorage.setItem('pos_theme', 'dark');
     if (toggleBtn) {
-      toggleBtn.innerHTML = '<i class="ri-sun-line"></i> <span>Modo Día</span>';
+      toggleBtn.innerHTML = '<i class="ri-sun-line"></i>';
     }
   } else {
     localStorage.setItem('pos_theme', 'light');
     if (toggleBtn) {
-      toggleBtn.innerHTML = '<i class="ri-moon-line"></i> <span>Modo Noche</span>';
+      toggleBtn.innerHTML = '<i class="ri-moon-line"></i>';
     }
   }
 }
