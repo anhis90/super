@@ -39,9 +39,6 @@
         <li><button onclick="openPopup('reportes')" title="Reportes"><i class="ri-bar-chart-box-line"></i> Reportes</button></li>
         <li><button onclick="openPopup('descuentos')" title="Descuentos"><i class="ri-percent-line"></i> Descuentos</button></li>
         <li><button onclick="openPopup('promociones')" title="Promociones"><i class="ri-megaphone-line"></i> Promociones</button></li>
-        <li style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border);">
-          <button onclick="handleLogout()" style="color: var(--danger);"><i class="ri-logout-box-line"></i> Salir</button>
-        </li>
       </ul>
     </nav>
 
@@ -49,9 +46,14 @@
       <header>
         <div class="header-main">
           <h1>Punto de Venta <span id="user-role-badge" class="badge">Cajero</span></h1>
-          <button id="theme-toggle" onclick="toggleDarkMode()" class="icon-btn" title="Alternar tema">
-            <i class="ri-moon-line"></i>
-          </button>
+          <div class="header-actions">
+            <button id="theme-toggle" onclick="toggleDarkMode()" class="icon-btn" title="Alternar tema">
+              <i class="ri-moon-line"></i>
+            </button>
+            <button class="logout-btn" onclick="handleLogout()" title="Cerrar Sesión">
+              <i class="ri-logout-box-line"></i> <span>Cerrar Sesión</span>
+            </button>
+          </div>
         </div>
         <div class="current-date" id="date-display"></div>
       </header>
