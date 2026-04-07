@@ -350,9 +350,15 @@ function renderStats() {
     document.getElementById('dashboard-low-stock').textContent = lowStock;
     document.getElementById('dashboard-low-stock').style.color = lowStock > 0 ? 'var(--danger)' : 'var(--success)';
     
-    // Caja Opening
+    // Caja Opening & Current Cash
+    const cashSales = transactions.filter(t => t.method === 'Efectivo').reduce((s,t)=>s+t.total,0);
+    const totalCash = openingCash + cashSales;
+    
     const cajaOpeningEl = document.getElementById('caja-monto-apertura');
     if (cajaOpeningEl) cajaOpeningEl.textContent = `$${openingCash.toFixed(2)}`;
+    
+    const cajaTotalEl = document.getElementById('caja-monto-total');
+    if (cajaTotalEl) cajaTotalEl.textContent = `$${totalCash.toFixed(2)}`;
     
     // Reports
     const reportIncomeTotalEl = document.getElementById('report-income-total');

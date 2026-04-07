@@ -205,9 +205,15 @@
   <div class="popup" id="popup-caja">
     <div class="popup-header"><h2>Gestión de Caja</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
     <div class="popup-body">
-      <div class="stat-card" style="margin-bottom: 20px;">
-        <h3>Monto de Cambio (Apertura)</h3>
-        <p id="dashboard-monto-cambio-caja">$0.00</p>
+      <div class="dashboard-stats" style="margin-bottom: 30px;">
+        <div class="stat-card">
+          <h3>Fondo de Apertura</h3>
+          <p id="caja-monto-apertura" style="font-size: 24px; font-weight: 800;">$0.00</p>
+        </div>
+        <div class="stat-card">
+          <h3>Efectivo en Caja</h3>
+          <p id="caja-monto-total" style="font-size: 24px; font-weight: 800; color: var(--success);">$0.00</p>
+        </div>
       </div>
       <div class="add-item-form admin-only" style="margin-bottom: 20px;">
         <div class="input-inline">
