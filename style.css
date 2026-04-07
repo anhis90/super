@@ -1,13 +1,13 @@
 :root {
-  --bg-dark: #0f172a;
-  --bg-surface: #1e293b;
-  --bg-surface-hover: #334155;
+  --bg-dark: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #e2e8f0;
   --primary: #3b82f6;
   --primary-hover: #2563eb;
   --success: #10b981;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --border: #334155;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border: #cbd5e1;
   --danger: #ef4444;
   --font-family: 'Inter', sans-serif;
 }
@@ -248,7 +248,7 @@ header h1 {
   justify-content: space-between;
   align-items: center;
   padding: 10px;
-  background-color: rgba(255,255,255,0.02);
+  background-color: var(--bg-dark);
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -294,7 +294,7 @@ header h1 {
 .cart-summary {
   padding: 20px;
   border-top: 1px solid var(--border);
-  background-color: rgba(0,0,0,0.1);
+  background-color: var(--bg-dark);
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
 }
@@ -369,7 +369,7 @@ header h1 {
   display: none;
   opacity: 0;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .popup.active {
@@ -566,7 +566,7 @@ header h1 {
   transition: all 0.3s;
   text-align: center;
   padding: 30px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .checkout-modal.active {
