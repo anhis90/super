@@ -479,16 +479,22 @@ header h1 {
 
 .input-inline {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .input-inline input {
-  flex: 1;
+  flex: 1 1 120px;
   padding: 10px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text-main);
+  box-sizing: border-box;
+}
+
+.input-inline button {
+  flex: 1 1 100px;
 }
 
 .editable-list {
