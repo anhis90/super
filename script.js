@@ -33,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // load transactions
   transactions = JSON.parse(localStorage.getItem('pos_transactions')) || [];
   
+  // Load theme
+  if (localStorage.getItem('pos_theme') === 'dark') {
+    document.body.classList.add('dark');
+    const toggleBtn = document.getElementById('theme-toggle');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="ri-sun-line"></i> <span>Modo Día</span>';
+    }
+  }
+
   populateProductTable();
   renderPaymentMethods();
   renderDiscountRules();
@@ -514,5 +523,24 @@ function setOpeningCash() {
     alert('Monto de cambio establecido correctamente.');
   } else {
     alert('Por favor, ingrese un monto válido.');
+  }
+}
+
+function toggleDarkMode() {
+  const body = document.body;
+  const toggleBtn = document.getElementById('theme-toggle');
+  
+  body.classList.toggle('dark');
+  
+  if (body.classList.contains('dark')) {
+    localStorage.setItem('pos_theme', 'dark');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="ri-sun-line"></i> <span>Modo Día</span>';
+    }
+  } else {
+    localStorage.setItem('pos_theme', 'light');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="ri-moon-line"></i> <span>Modo Noche</span>';
+    }
   }
 }
