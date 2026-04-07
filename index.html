@@ -281,24 +281,25 @@
   </div>
 
   <!-- Modals -->
-  <div class="checkout-modal" id="payment-modal">
-    <h2>Resumen de Cobro</h2>
-    <div id="payment-details" style="text-align: left; margin: 15px 0;"></div>
-    <div id="qr-container" style="display: none; margin: 20px 0;">
-      <i class="ri-qr-code-line" style="font-size: 80px;"></i>
-      <p>Escanee para pagar</p>
+  <div class="popup" id="payment-modal">
+    <div class="popup-header"><h2>Resumen de Cobro</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
+    <div class="popup-body">
+      <div id="payment-details" style="text-align: center; font-size: 20px; margin-bottom: 25px;"></div>
+      <button class="checkout-btn" onclick="confirmPayment()">Confirmar y Emitir Ticket</button>
+      <button class="action-btn" style="background: var(--text-muted); width: 100%; margin-top: 10px;" onclick="closePopups()">Cancelar</button>
     </div>
-    <button class="checkout-btn" onclick="confirmPayment()">Confirmar y Emitir Ticket</button>
-    <button class="action-btn" style="background: var(--text-muted); margin-top: 5px;" onclick="closePopups()">Cancelar</button>
   </div>
 
-  <div class="overlay" id="checkout-overlay"></div>
-  <div class="checkout-modal" id="checkout-modal">
-    <i class="ri-checkbox-circle-fill success-icon"></i>
-    <h2>¡Venta Registrada!</h2>
-    <div class="receipt-summary" id="receipt-summary" style="font-family: 'Courier New', Courier, monospace; font-size: 13px;"></div>
-    <button class="action-btn" onclick="finishCheckout()">Siguiente Venta</button>
-    <button class="action-btn" style="background: var(--primary);" onclick="window.print()">Imprimir Comprobante</button>
+  <div class="popup" id="checkout-modal">
+    <div class="popup-body" style="text-align: center; padding: 40px 20px;">
+      <i class="ri-checkbox-circle-fill success-icon"></i>
+      <h2 style="margin: 20px 0;">¡Venta Registrada!</h2>
+      <div id="receipt-summary" style="font-family: 'Courier New', Courier, monospace; background: rgba(0,0,0,0.05); padding: 20px; border-radius: 15px; margin-bottom: 25px; text-align: left;"></div>
+      <div style="display: flex; gap: 15px;">
+        <button class="action-btn" style="flex: 1;" onclick="finishCheckout()">Nueva Venta</button>
+        <button class="action-btn" style="flex: 1; background: var(--primary);" onclick="window.print()"><i class="ri-printer-line"></i> Imprimir</button>
+      </div>
+    </div>
   </div>
 
   <script src="script.js"></script>

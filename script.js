@@ -6,7 +6,7 @@ let products = JSON.parse(localStorage.getItem('pos_products')) || [
   { code: '004', name: 'Gaseosa Cola 2.25L', price: 1500, stock: 100, image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=200&q=80' }
 ];
 
-let cart = [];
+// cart removed from here, moved to state section
 let currentUser = JSON.parse(localStorage.getItem('pos_user')) || null;
 let ivaConfig = parseFloat(localStorage.getItem('pos_iva')) || 21;
 let suppliers = JSON.parse(localStorage.getItem('pos_suppliers')) || [];
@@ -20,6 +20,7 @@ let paymentRules = JSON.parse(localStorage.getItem('pos_payment_rules')) || [
 let promos = JSON.parse(localStorage.getItem('pos_promos')) || [];
 let transactions = JSON.parse(localStorage.getItem('pos_transactions')) || [];
 let openingCash = parseFloat(localStorage.getItem('pos_opening_cash')) || 0;
+let cart = JSON.parse(localStorage.getItem('pos_cart')) || [];
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -162,6 +163,7 @@ function changeQty(idx, delta) {
     if (delta > 0 && item.qty + delta > product.stock) { alert('Sin stock suficiente'); return; }
     item.qty += delta;
     if (item.qty <= 0) cart.splice(idx, 1);
+    saveData();
     renderCart();
 }
 
@@ -207,7 +209,8 @@ function openPaymentModal() {
 
 function confirmPayment() {
     const tkCode = 'TK-' + Date.now().toString().slice(-6);
-    const total = parseFloat(document.getElementById('total').textContent.replace('$',''));
+    const totalRaw = document.getElementById('total').textContent;
+    const total = parseFloat(totalRaw.replace(/[^0-9.-]+/g, ""));
     
     // Decrement Stock
     cart.forEach(item => {
@@ -224,6 +227,7 @@ function confirmPayment() {
     };
     
     transactions.push(tx);
+    cart = [];
     saveData();
     showReceipt(tx);
     finishCheckout();
@@ -240,13 +244,11 @@ function showReceipt(tx) {
         <p>IVA Incluy. (${ivaConfig}%)</p>
     `;
     document.getElementById('checkout-modal').classList.add('active');
-    document.getElementById('checkout-overlay').classList.add('active');
+    document.getElementById('overlay').classList.add('active');
 }
 
 function finishCheckout() {
-    cart = [];
-    renderCart();
-    renderAll(); // Updates tables and stats
+    renderAll(); // Updates tables, stats AND cart
     document.getElementById('payment-modal').classList.remove('active');
 }
 
@@ -303,6 +305,7 @@ function renderAll() {
     populateSelects();
     renderDiscountRules();
     renderPromos();
+    renderCart();
 }
 
 function renderProductTable() {
@@ -372,6 +375,7 @@ function saveData() {
     localStorage.setItem('pos_suppliers', JSON.stringify(suppliers));
     localStorage.setItem('pos_purchases', JSON.stringify(purchases));
     localStorage.setItem('pos_transactions', JSON.stringify(transactions));
+    localStorage.setItem('pos_cart', JSON.stringify(cart));
 }
 
 function exportData(type) {
@@ -390,8 +394,7 @@ function openPopup(id) {
 }
 
 function closePopups() {
-    document.querySelectorAll('.popup, .checkout-modal, .overlay').forEach(el => el.classList.remove('active'));
-    document.getElementById('checkout-overlay').classList.remove('active');
+    document.querySelectorAll('.popup, .overlay').forEach(el => el.classList.remove('active'));
 }
 
 function playScanSound() {
