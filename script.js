@@ -11,12 +11,27 @@ const products = [
 let cart = [];
 let globalDiscount = 0;
 
+let paymentRules = [
+  { id: 'efectivo', name: 'Efectivo', discount: 10 },
+  { id: 'debito', name: 'Tarjeta de Débito', discount: 0 },
+  { id: 'credito', name: 'Tarjeta de Crédito', discount: 0 },
+  { id: 'mercadopago', name: 'Mercado Pago (QR)', discount: 0 }
+];
+
+let promos = [
+  { id: 1, text: 'Llevá 3, pagá 2 en Gaseosas' },
+  { id: 2, text: '15% de descuento en Lácteos los Miércoles' }
+];
+
 // --- Initialize ---
 document.addEventListener('DOMContentLoaded', () => {
   updateDate();
   setInterval(updateDate, 1000);
   
   populateProductTable();
+  renderPaymentMethods();
+  renderDiscountRules();
+  renderPromos();
   
   const codeInput = document.getElementById('product-code');
   const addBtn = document.getElementById('add-btn');
@@ -60,6 +75,27 @@ function addProductToCart(code) {
   } else {
     alert('Producto no encontrado!');
     codeInput.select();
+  }
+}
+
+function addNewProduct() {
+  const code = document.getElementById('new-prod-code').value;
+  const name = document.getElementById('new-prod-name').value;
+  const price = parseFloat(document.getElementById('new-prod-price').value);
+
+  if (code && name && !isNaN(price)) {
+    if (products.find(p => p.code === code)) {
+      alert('El código ya existe');
+      return;
+    }
+    products.push({ code, name, price, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80' });
+    populateProductTable();
+    document.getElementById('new-prod-code').value = '';
+    document.getElementById('new-prod-name').value = '';
+    document.getElementById('new-prod-price').value = '';
+    alert('Producto agregado');
+  } else {
+    alert('Complete todos los campos válidamente');
   }
 }
 
@@ -108,15 +144,23 @@ function removeItem(index) {
 }
 
 function updateTotals(subtotal) {
-  const discountAmount = subtotal * (globalDiscount / 100);
+  const pmSelect = document.getElementById('payment-method');
+  let pmDiscount = 0;
+  if(pmSelect) {
+    const r = paymentRules.find(rule => rule.id === pmSelect.value);
+    if(r) pmDiscount = r.discount;
+  }
+  
+  const totalDiscountPercent = globalDiscount + pmDiscount;
+  const discountAmount = subtotal * (totalDiscountPercent / 100);
   const total = subtotal - discountAmount;
 
   document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
   
   const discountRow = document.getElementById('discount-row');
-  if (globalDiscount > 0) {
+  if (totalDiscountPercent > 0) {
     discountRow.style.display = 'flex';
-    document.getElementById('discount-percent').textContent = globalDiscount;
+    document.getElementById('discount-percent').textContent = totalDiscountPercent;
     document.getElementById('discount-amount').textContent = `-$${discountAmount.toFixed(2)}`;
   } else {
     discountRow.style.display = 'none';
@@ -126,6 +170,57 @@ function updateTotals(subtotal) {
 }
 
 // --- Discounts ---
+function renderPaymentMethods() {
+  const select = document.getElementById('payment-method');
+  if(select) {
+    const currentVal = select.value;
+    select.innerHTML = '';
+    paymentRules.forEach(rule => {
+      const opt = document.createElement('option');
+      opt.value = rule.id;
+      opt.textContent = rule.name + (rule.discount > 0 ? ` (-${rule.discount}%)` : '');
+      select.appendChild(opt);
+    });
+    if(paymentRules.find(r=>r.id === currentVal)) select.value = currentVal;
+    else if(paymentRules.length > 0) select.value = paymentRules[0].id;
+  }
+}
+
+function renderDiscountRules() {
+  const list = document.getElementById('discounts-list');
+  if(!list) return;
+  list.innerHTML = '';
+  paymentRules.forEach((rule, idx) => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span>${rule.name} <strong>(${rule.discount}%)</strong></span>
+      <button class="remove-btn" onclick="removeDiscountRule('${rule.id}')"><i class="ri-delete-bin-line"></i></button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function addDiscountRule() {
+  const name = document.getElementById('desc-name').value;
+  const val = parseFloat(document.getElementById('desc-value').value);
+  if(name && !isNaN(val)) {
+    const id = name.toLowerCase().replace(/\s+/g, '');
+    paymentRules.push({ id, name, discount: val });
+    renderDiscountRules();
+    renderPaymentMethods();
+    renderCart();
+    document.getElementById('desc-name').value = '';
+    document.getElementById('desc-value').value = '';
+  }
+}
+
+function removeDiscountRule(id) {
+  paymentRules = paymentRules.filter(r => r.id !== id);
+  renderDiscountRules();
+  renderPaymentMethods();
+  renderCart();
+}
+
 function applyDiscount() {
   const input = document.getElementById('global-discount');
   const val = parseFloat(input.value);
@@ -136,6 +231,35 @@ function applyDiscount() {
   } else {
     alert('Ingrese un porcentaje válido entre 0 y 100');
   }
+}
+
+// --- Promotions ---
+function renderPromos() {
+  const list = document.getElementById('promo-list');
+  if(!list) return;
+  list.innerHTML = '';
+  promos.forEach(promo => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span>${promo.text}</span>
+      <button class="remove-btn" onclick="removePromotion(${promo.id})"><i class="ri-delete-bin-line"></i></button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function addPromotion() {
+  const text = document.getElementById('new-promo-text').value;
+  if(text) {
+    promos.push({ id: Date.now(), text });
+    renderPromos();
+    document.getElementById('new-promo-text').value = '';
+  }
+}
+
+function removePromotion(id) {
+  promos = promos.filter(p => p.id !== id);
+  renderPromos();
 }
 
 // --- Popups Handling ---
@@ -151,10 +275,9 @@ function openPopup(id) {
 
 function closePopups() {
   document.querySelectorAll('.popup').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.checkout-modal').forEach(m => m.classList.remove('active'));
   const overlay = document.getElementById('overlay');
   if (overlay) overlay.classList.remove('active');
-  const checkoutModal = document.getElementById('checkout-modal');
-  if (checkoutModal) checkoutModal.classList.remove('active');
   const checkoutOverlay = document.getElementById('checkout-overlay');
   if (checkoutOverlay) checkoutOverlay.classList.remove('active');
 }
@@ -175,30 +298,56 @@ function populateProductTable() {
 }
 
 // --- Checkout ---
-function checkout() {
+function openPaymentModal() {
   if (cart.length === 0) {
     alert('El carrito está vacío');
     return;
   }
   
+  const pModal = document.getElementById('payment-modal');
+  const overlay = document.getElementById('checkout-overlay');
+  
+  const pmSelect = document.getElementById('payment-method');
+  const qrContainer = document.getElementById('qr-container');
+  
+  if(pmSelect && pmSelect.value === 'mercadopago') {
+    qrContainer.style.display = 'block';
+  } else {
+    qrContainer.style.display = 'none';
+  }
+  
+  overlay.classList.add('active');
+  pModal.classList.add('active');
+}
+
+function confirmPayment() {
+  document.getElementById('payment-modal').classList.remove('active');
+  
   let subtotal = 0;
   cart.forEach(item => {
     subtotal += item.product.price * item.qty;
   });
-  const discountAmount = subtotal * (globalDiscount / 100);
+  
+  const pmSelect = document.getElementById('payment-method');
+  let pmDiscount = 0;
+  if(pmSelect) {
+    const r = paymentRules.find(rule => rule.id === pmSelect.value);
+    if(r) pmDiscount = r.discount;
+  }
+  
+  const totalDiscountPercent = globalDiscount + pmDiscount;
+  const discountAmount = subtotal * (totalDiscountPercent / 100);
   const total = subtotal - discountAmount;
   
   const summaryBox = document.getElementById('receipt-summary');
   summaryBox.innerHTML = `
     <p><span>Artículos:</span> <span>${cart.reduce((a,b)=>a+b.qty, 0)}</span></p>
     <p><span>Subtotal:</span> <span>$${subtotal.toFixed(2)}</span></p>
-    ${globalDiscount > 0 ? `<p><span>Descuento:</span> <span>-$${discountAmount.toFixed(2)}</span></p>` : ''}
+    ${totalDiscountPercent > 0 ? `<p><span>Descuento:</span> <span>-$${discountAmount.toFixed(2)}</span></p>` : ''}
     <p class="total-p"><span>Total Pagado:</span> <span>$${total.toFixed(2)}</span></p>
   `;
   
   const modal = document.getElementById('checkout-modal');
-  const overlay = document.getElementById('checkout-overlay');
-  overlay.classList.add('active');
   setTimeout(() => modal.classList.add('active'), 10);
 }
 
@@ -213,6 +362,7 @@ function finishCheckout() {
     </div>
   `;
   document.getElementById('product-code').value = '';
+  document.getElementById('global-discount').value = '';
   closePopups();
   
   // update operations stat purely visual

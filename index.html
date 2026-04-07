@@ -66,7 +66,16 @@
               <span>Total:</span>
               <span id="total">$0.00</span>
             </div>
-            <button class="checkout-btn" onclick="checkout()"><i class="ri-shopping-cart-checkout-line"></i> Cobrar</button>
+            <div class="form-group payment-method-group">
+              <label>Medio de Pago</label>
+              <select id="payment-method" onchange="renderCart()">
+                <option value="efectivo">Efectivo</option>
+                <option value="debito">Tarjeta de Débito</option>
+                <option value="credito">Tarjeta de Crédito</option>
+                <option value="mercadopago">Mercado Pago (QR)</option>
+              </select>
+            </div>
+            <button class="checkout-btn" onclick="openPaymentModal()"><i class="ri-shopping-cart-checkout-line"></i> Cobrar</button>
           </div>
         </div>
       </div>
@@ -102,6 +111,15 @@
       <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
     </div>
     <div class="popup-body">
+      <div class="add-item-form">
+        <h3>Agregar Producto</h3>
+        <div class="input-inline">
+          <input type="text" id="new-prod-code" placeholder="Código (escanear o tipear)">
+          <input type="text" id="new-prod-name" placeholder="Nombre del producto">
+          <input type="number" id="new-prod-price" placeholder="Precio">
+          <button class="action-btn" onclick="addNewProduct()"><i class="ri-add-line"></i> Añadir</button>
+        </div>
+      </div>
       <table class="data-table">
         <thead>
           <tr>
@@ -171,11 +189,23 @@
       <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
     </div>
     <div class="popup-body">
+      <div class="add-item-form">
+        <h3>Configurar Descuentos</h3>
+        <div class="input-inline">
+          <input type="text" id="desc-name" placeholder="Nombre (Ej: Efectivo)">
+          <input type="number" id="desc-value" placeholder="Porcentaje (%)">
+          <button class="action-btn" onclick="addDiscountRule()"><i class="ri-add-line"></i> Añadir</button>
+        </div>
+      </div>
+      <ul class="editable-list" id="discounts-list">
+        <!-- JS generates lists -->
+      </ul>
+      <hr>
       <div class="form-group">
-        <label>Descuento al subtotal (%)</label>
+        <label>Descuento al subtotal manual (%)</label>
         <input type="number" id="global-discount" placeholder="Ej: 10" min="0" max="100">
       </div>
-      <button class="action-btn" onclick="applyDiscount()">Aplicar Descuento</button>
+      <button class="action-btn" onclick="applyDiscount()">Aplicar Descuento Manual</button>
     </div>
   </div>
 
@@ -185,11 +215,30 @@
       <button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button>
     </div>
     <div class="popup-body">
-      <p>Ofertas vigentes:</p>
-      <ul class="promo-list">
-        <li>Llevá 3, pagá 2 en Gaseosas</li>
-        <li>15% de descuento en Lácteos los Miércoles</li>
+      <div class="add-item-form">
+        <h3>Agregar Promoción</h3>
+        <div class="input-inline">
+          <input type="text" id="new-promo-text" placeholder="Ej: Llevá 3 pagá 2 en Gaseosas">
+          <button class="action-btn" onclick="addPromotion()"><i class="ri-add-line"></i> Añadir</button>
+        </div>
+      </div>
+      <ul class="editable-list" id="promo-list">
+        <!-- Promos filled by JS -->
       </ul>
+    </div>
+  </div>
+
+  <!-- Payment Process Modal -->
+  <div class="checkout-modal" id="payment-modal">
+    <h2>Procesar Pago</h2>
+    <div id="payment-details"></div>
+    <div id="qr-container" style="display: none; margin: 20px 0;">
+      <i class="ri-qr-code-line" style="font-size: 80px;"></i>
+      <p>Escanee para pagar con Mercado Pago</p>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button class="action-btn" style="background: var(--text-muted);" onclick="closePopups()">Cancelar</button>
+      <button class="action-btn" onclick="confirmPayment()">Confirmar Pago</button>
     </div>
   </div>
 
