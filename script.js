@@ -302,6 +302,7 @@ function renderAll() {
     renderTransactions();
     populateSelects();
     renderDiscountRules();
+    renderPromos();
 }
 
 function renderProductTable() {
