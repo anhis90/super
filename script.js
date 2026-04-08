@@ -5,12 +5,6 @@ let currentSucursal = null;
 let ivaConfig = 21;
 let suppliers = [];
 let purchases = [];
-let paymentRules = [
-  { id: 'efectivo', name: 'Efectivo', discount: 10 },
-  { id: 'debito', name: 'Tarjeta de Débito', discount: 0 },
-  { id: 'credito', name: 'Tarjeta de Crédito', discount: 0 },
-  { id: 'mercadopago', name: 'Mercado Pago (QR)', discount: 0 }
-];
 let promos = [];
 let transactions = [];
 let openingCash = 0;
@@ -69,8 +63,21 @@ async function loadInitialData() {
         cost: c.total
     })) || [];
 
+    // Config (IVA, Opening Cash)
+    const { data: configData } = await supabase.from('configuracion').select('*').eq('sucursal_id', currentSucursal.id);
+    ivaConfig = parseFloat(configData?.find(c => c.key === 'iva')?.value || 21);
+    openingCash = parseFloat(configData?.find(c => c.key === 'opening_cash')?.value || 0);
+
+    // Metodos de Pago
+    const { data: pmData } = await supabase.from('metodos_pago').select('*').eq('sucursal_id', currentSucursal.id);
+    paymentRules = pmData || [];
+
+    // Promos
+    const { data: promoData } = await supabase.from('promociones').select('*').eq('sucursal_id', currentSucursal.id);
+    promos = promoData || [];
+
     // Ventas (Transactions)
-    const { data: salesData } = await supabase.from('ventas').select('*, detalle_ventas(qty, price, productos(name))');
+    const { data: salesData } = await supabase.from('ventas').select('*, detalle_ventas(qty, price, productos(name))').eq('sucursal_id', currentSucursal.id);
     transactions = salesData?.map(s => ({
         code: s.code,
         date: new Date(s.date).toLocaleString(),
@@ -540,11 +547,11 @@ async function adjustStock(code) {
     }
 }
 
-function setOpeningCash() {
+async function setOpeningCash() {
     const val = parseFloat(document.getElementById('opening-cash-input-caja').value);
     if (!isNaN(val)) {
         openingCash = val;
-        localStorage.setItem('pos_opening_cash', openingCash);
+        await supabase.from('configuracion').upsert({ key: 'opening_cash', value: val.toString(), sucursal_id: currentSucursal.id }, { onConflict: 'key,sucursal_id' });
         renderStats();
         alert('Monto establecido');
     }
@@ -575,19 +582,21 @@ async function registerCajaOp() {
     }
 }
 
-function updateIVAConfig(val) {
+async function updateIVAConfig(val) {
     ivaConfig = parseFloat(val);
-    localStorage.setItem('pos_iva', ivaConfig);
+    await supabase.from('configuracion').upsert({ key: 'iva', value: val.toString(), sucursal_id: currentSucursal.id }, { onConflict: 'key,sucursal_id' });
     renderCart();
 }
 
-function addDiscountRule() {
+async function addDiscountRule() {
     const name = document.getElementById('desc-name').value;
     const val = parseFloat(document.getElementById('desc-value').value);
     if (name && !isNaN(val)) {
-        paymentRules.push({ id: name.toLowerCase().replace(/ /g,''), name, discount: val });
-        localStorage.setItem('pos_payment_rules', JSON.stringify(paymentRules));
-        renderAll();
+        const { error } = await supabase.from('metodos_pago').insert([{ name, discount: val, sucursal_id: currentSucursal.id }]);
+        if (error) alert(error.message); else {
+            await loadInitialData();
+            renderAll();
+        }
     }
 }
 
@@ -597,20 +606,24 @@ function renderDiscountRules() {
     list.innerHTML = paymentRules.map(r => `<li><span>${r.name} (${r.discount}%)</span> <button class="btn-icon-red" onclick="removeDiscountRule('${r.id}')" title="Eliminar"><i class="ri-close-circle-fill"></i></button></li>`).join('');
 }
 
-function removeDiscountRule(id) {
-    paymentRules = paymentRules.filter(r => r.id !== id);
-    localStorage.setItem('pos_payment_rules', JSON.stringify(paymentRules));
-    renderAll();
+async function removeDiscountRule(id) {
+    const { error } = await supabase.from('metodos_pago').delete().eq('id', id);
+    if (error) alert(error.message); else {
+        await loadInitialData();
+        renderAll();
+    }
 }
 
-function addPromotion() {
+async function addPromotion() {
     const code = document.getElementById('promo-code').value;
     const take = parseInt(document.getElementById('promo-take').value);
     const pay = parseInt(document.getElementById('promo-pay').value);
     if (code && take > pay) {
-        promos.push({ id: Date.now(), code, take, pay });
-        localStorage.setItem('pos_promos', JSON.stringify(promos));
-        renderPromos();
+        const { error } = await supabase.from('promociones').insert([{ code, take, pay, sucursal_id: currentSucursal.id }]);
+        if (error) alert(error.message); else {
+            await loadInitialData();
+            renderPromos();
+        }
     }
 }
 
@@ -626,10 +639,12 @@ function removePromo(id) {
     renderPromos();
 }
 
-function clearTransactions() {
+async function clearTransactions() {
     if (confirm('¿Borrar todo el historial?')) {
-        transactions = [];
-        localStorage.setItem('pos_transactions', JSON.stringify(transactions));
-        renderAll();
+        const { error } = await supabase.from('ventas').delete().eq('sucursal_id', currentSucursal.id);
+        if (error) alert(error.message); else {
+            await loadInitialData();
+            renderAll();
+        }
     }
 }

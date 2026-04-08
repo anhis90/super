@@ -1,5 +1,21 @@
+-- 0. Enable Extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 0.1 Drop existing tables to avoid schema conflicts
+DROP TABLE IF EXISTS detalle_compras CASCADE;
+DROP TABLE IF EXISTS compras CASCADE;
+DROP TABLE IF EXISTS detalle_ventas CASCADE;
+DROP TABLE IF EXISTS ventas CASCADE;
+DROP TABLE IF EXISTS productos CASCADE;
+DROP TABLE IF EXISTS proveedores CASCADE;
+DROP TABLE IF EXISTS caja_movimientos CASCADE;
+DROP TABLE IF EXISTS configuracion CASCADE;
+DROP TABLE IF EXISTS metodos_pago CASCADE;
+DROP TABLE IF EXISTS promociones CASCADE;
+DROP TABLE IF EXISTS sucursales CASCADE;
+
 -- 1. Table: sucursales
-CREATE TABLE IF NOT EXISTS sucursales (
+CREATE TABLE sucursales (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     address TEXT,
@@ -10,7 +26,7 @@ CREATE TABLE IF NOT EXISTS sucursales (
 INSERT INTO sucursales (name, address) VALUES ('Casa Central', 'Av. Principal 123');
 
 -- 2. Table: productos
-CREATE TABLE IF NOT EXISTS productos (
+CREATE TABLE productos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
@@ -22,7 +38,7 @@ CREATE TABLE IF NOT EXISTS productos (
 );
 
 -- 3. Table: proveedores
-CREATE TABLE IF NOT EXISTS proveedores (
+CREATE TABLE proveedores (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     contact TEXT,
@@ -31,7 +47,7 @@ CREATE TABLE IF NOT EXISTS proveedores (
 );
 
 -- 4. Table: ventas
-CREATE TABLE IF NOT EXISTS ventas (
+CREATE TABLE ventas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code TEXT UNIQUE NOT NULL,
     date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -42,7 +58,7 @@ CREATE TABLE IF NOT EXISTS ventas (
 );
 
 -- 5. Table: detalle_ventas
-CREATE TABLE IF NOT EXISTS detalle_ventas (
+CREATE TABLE detalle_ventas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     venta_id UUID REFERENCES ventas(id) ON DELETE CASCADE,
     product_id UUID REFERENCES productos(id) ON DELETE CASCADE,
@@ -51,7 +67,7 @@ CREATE TABLE IF NOT EXISTS detalle_ventas (
 );
 
 -- 6. Table: compras
-CREATE TABLE IF NOT EXISTS compras (
+CREATE TABLE compras (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     supplier_id UUID REFERENCES proveedores(id),
@@ -60,7 +76,7 @@ CREATE TABLE IF NOT EXISTS compras (
 );
 
 -- 7. Table: detalle_compras
-CREATE TABLE IF NOT EXISTS detalle_compras (
+CREATE TABLE detalle_compras (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     compra_id UUID REFERENCES compras(id) ON DELETE CASCADE,
     product_id UUID REFERENCES productos(id) ON DELETE CASCADE,
@@ -69,7 +85,7 @@ CREATE TABLE IF NOT EXISTS detalle_compras (
 );
 
 -- 8. Table: caja_movimientos
-CREATE TABLE IF NOT EXISTS caja_movimientos (
+CREATE TABLE caja_movimientos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     type TEXT NOT NULL, -- Ingreso, Egreso
     amount DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -80,15 +96,16 @@ CREATE TABLE IF NOT EXISTS caja_movimientos (
 );
 
 -- 9. Table: configuracion
-CREATE TABLE IF NOT EXISTS configuracion (
+CREATE TABLE configuracion (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    key TEXT UNIQUE NOT NULL,
+    key TEXT NOT NULL,
     value TEXT NOT NULL,
-    sucursal_id UUID REFERENCES sucursales(id) ON DELETE CASCADE
+    sucursal_id UUID REFERENCES sucursales(id) ON DELETE CASCADE,
+    UNIQUE(key, sucursal_id)
 );
 
 -- 10. Table: metodos_pago
-CREATE TABLE IF NOT EXISTS metodos_pago (
+CREATE TABLE metodos_pago (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     discount DECIMAL(5,2) DEFAULT 0,
@@ -96,7 +113,7 @@ CREATE TABLE IF NOT EXISTS metodos_pago (
 );
 
 -- 11. Table: promociones
-CREATE TABLE IF NOT EXISTS promociones (
+CREATE TABLE promociones (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code TEXT NOT NULL,
     take INTEGER NOT NULL,
@@ -118,14 +135,31 @@ ALTER TABLE metodos_pago ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promociones ENABLE ROW LEVEL SECURITY;
 
 -- 13. Create basic policies (Allow all for authenticated users)
-CREATE POLICY "Allow all for authenticated" ON sucursales FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON productos FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON proveedores FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON ventas FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON detalle_ventas FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON compras FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON detalle_compras FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON caja_movimientos FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON configuracion FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON metodos_pago FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated" ON promociones FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow all authenticated" ON sucursales FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON productos FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON proveedores FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON ventas FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON detalle_ventas FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON compras FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON detalle_compras FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON caja_movimientos FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON configuracion FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON metodos_pago FOR ALL USING (true);
+CREATE POLICY "Allow all authenticated" ON promociones FOR ALL USING (true);
+
+-- 14. Initial Data for default sucursal
+DO $$
+DECLARE
+    sid UUID;
+BEGIN
+    SELECT id INTO sid FROM sucursales WHERE name = 'Casa Central' LIMIT 1;
+    
+    INSERT INTO configuracion (key, value, sucursal_id) VALUES ('iva', '21', sid), ('opening_cash', '0', sid)
+    ON CONFLICT (key, sucursal_id) DO NOTHING;
+    
+    INSERT INTO metodos_pago (name, discount, sucursal_id) VALUES 
+    ('Efectivo', 10, sid), 
+    ('Tarjeta de Débito', 0, sid), 
+    ('Tarjeta de Crédito', 0, sid), 
+    ('Mercado Pago', 0, sid);
+END $$;
