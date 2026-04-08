@@ -1,17 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super POS Pro</title>
+
   <link rel="stylesheet" href="style.css">
+
+  <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Iconos -->
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+
+  <!-- 🔥 Supabase PRIMERO -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
+
+  <!-- LOGIN -->
   <div id="login-screen" class="login-overlay">
     <div class="login-card">
       <div class="logo" style="margin-bottom: 20px;">Super<span>POS</span> Pro</div>
@@ -27,289 +38,92 @@
     </div>
   </div>
 
+  <!-- APP -->
   <div class="app-container" id="main-app" style="display: none;">
+
+    <!-- SIDEBAR -->
     <nav class="sidebar">
       <div class="logo">Super<span>POS</span></div>
       <ul class="nav-links">
-        <li><button onclick="openPopup('inicio')" title="Inicio"><i class="ri-home-4-line"></i> Inicio</button></li>
-        <li><button onclick="openPopup('lista')" title="Productos"><i class="ri-list-check"></i> Productos</button></li>
-        <li><button onclick="openPopup('proveedores')" title="Proveedores"><i class="ri-truck-line"></i> Proveedores</button></li>
-        <li><button onclick="openPopup('compras')" title="Ingresar Mercadería"><i class="ri-shopping-bag-3-line"></i> Compras</button></li>
-        <li><button onclick="openPopup('facturacion')" title="Facturación"><i class="ri-file-list-3-line"></i> Facturación</button></li>
-        <li><button onclick="openPopup('caja')" title="Caja"><i class="ri-wallet-3-line"></i> Caja</button></li>
-        <li><button onclick="openPopup('reportes')" title="Reportes"><i class="ri-bar-chart-box-line"></i> Reportes</button></li>
-        <li><button onclick="openPopup('descuentos')" title="Descuentos"><i class="ri-percent-line"></i> Descuentos</button></li>
-        <li><button onclick="openPopup('promociones')" title="Promociones"><i class="ri-megaphone-line"></i> Promociones</button></li>
+        <li><button onclick="openPopup('inicio')"><i class="ri-home-4-line"></i> Inicio</button></li>
+        <li><button onclick="openPopup('lista')"><i class="ri-list-check"></i> Productos</button></li>
+        <li><button onclick="openPopup('proveedores')"><i class="ri-truck-line"></i> Proveedores</button></li>
+        <li><button onclick="openPopup('compras')"><i class="ri-shopping-bag-3-line"></i> Compras</button></li>
+        <li><button onclick="openPopup('facturacion')"><i class="ri-file-list-3-line"></i> Facturación</button></li>
+        <li><button onclick="openPopup('caja')"><i class="ri-wallet-3-line"></i> Caja</button></li>
+        <li><button onclick="openPopup('reportes')"><i class="ri-bar-chart-box-line"></i> Reportes</button></li>
+        <li><button onclick="openPopup('descuentos')"><i class="ri-percent-line"></i> Descuentos</button></li>
+        <li><button onclick="openPopup('promociones')"><i class="ri-megaphone-line"></i> Promociones</button></li>
       </ul>
     </nav>
 
+    <!-- MAIN -->
     <main class="main-content">
       <header>
         <div class="header-main">
           <h1>Punto de Venta <span id="user-role-badge" class="badge">Cajero</span></h1>
           <div class="header-actions">
-            <button id="theme-toggle" onclick="toggleDarkMode()" class="icon-btn" title="Alternar tema">
+            <button onclick="toggleDarkMode()" class="icon-btn">
               <i class="ri-moon-line"></i>
             </button>
-            <button class="logout-btn" onclick="handleLogout()" title="Cerrar Sesión">
-              <i class="ri-logout-box-line"></i> <span>Cerrar Sesión</span>
+            <button class="logout-btn" onclick="handleLogout()">
+              <i class="ri-logout-box-line"></i> Cerrar Sesión
             </button>
           </div>
         </div>
         <div class="current-date" id="date-display"></div>
       </header>
 
+      <!-- POS -->
       <div class="pos-grid">
+
+        <!-- BUSCADOR -->
         <div class="scanner-section">
           <div class="input-group">
-            <input type="text" id="product-code" placeholder="Escanear código o buscar por nombre..." autofocus oninput="searchProducts(this.value)">
-            <button id="add-btn"><i class="ri-add-line"></i></button>
+            <input type="text" id="product-code" placeholder="Buscar producto..." oninput="searchProducts(this.value)">
           </div>
-          <div id="search-results" class="search-suggestions" style="display: none;"></div>
-          
-          <div class="product-preview" id="product-preview">
-            <div class="empty-state">
-              <i class="ri-barcode-box-line"></i>
-              <p>Esperando producto...</p>
-            </div>
-          </div>
+          <div id="search-results"></div>
+          <div id="product-preview"></div>
         </div>
 
+        <!-- CARRITO -->
         <div class="cart-section">
-          <div class="cart-header">
-            <h2>Carrito</h2>
+          <h2>Carrito</h2>
+          <div id="cart-items"></div>
+
+          <div>
+            <p>Subtotal: <span id="subtotal">$0</span></p>
+            <p>IVA: <span id="iva-amount">$0</span></p>
+            <p>Total: <span id="total">$0</span></p>
           </div>
-          <div class="cart-items" id="cart-items"></div>
-          <div class="cart-summary">
-            <div class="summary-details">
-              <div class="summary-row"><span>Subtotal:</span><span id="subtotal">$0.00</span></div>
-              <div class="summary-row"><span>IVA (21%):</span><span id="iva-amount">$0.00</span></div>
-              <div class="summary-row discount-row" id="discount-row" style="display: none;">
-                <span>Dcto (<span id="discount-percent">0</span>%):</span>
-                <span id="discount-amount">-$0.00</span>
-              </div>
-              <div class="summary-row total"><span>Total:</span><span id="total">$0.00</span></div>
-            </div>
-            
-            <div class="form-group">
-              <label>Medio de Pago</label>
-              <select id="payment-method" onchange="renderCart()">
-                <!-- JS populated -->
-              </select>
-            </div>
-            <button class="checkout-btn" onclick="openPaymentModal()"><i class="ri-shopping-cart-checkout-line"></i> Cobrar</button>
-          </div>
+
+          <select id="payment-method"></select>
+          <button onclick="openPaymentModal()">Cobrar</button>
         </div>
+
       </div>
     </main>
   </div>
 
-  <!-- Popups -->
-  <div class="overlay" id="overlay" onclick="closePopups()"></div>
+  <!-- OVERLAY -->
+  <div id="overlay" onclick="closePopups()"></div>
 
-  <!-- Inicio -->
-  <div class="popup" id="popup-inicio">
-    <div class="popup-header"><h2>Panel de Control</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="dashboard-stats">
-        <div class="stat-card"><h3>Ventas Hoy</h3><p id="dashboard-ventas-dia">$0.00</p></div>
-        <div class="stat-card"><h3>Operaciones</h3><p id="dashboard-operaciones">0</p></div>
-        <div class="stat-card"><h3>Stock Bajo</h3><p id="dashboard-low-stock" style="color: var(--danger);">0</p></div>
-      </div>
-    </div>
-  </div>
+  <!-- 🔥 CONFIG SUPABASE -->
+  <script>
+    const SUPABASE_URL = 'https://hhhyexgsfflzzsflpsqs.supabase.co';
 
-  <!-- Productos -->
-  <div class="popup" id="popup-lista">
-    <div class="popup-header"><h2>Gestión de Productos</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="add-item-form admin-only">
-        <h3>Nuevo Producto</h3>
-        <div class="input-inline">
-          <input type="text" id="new-prod-code" placeholder="Código">
-          <input type="text" id="new-prod-name" placeholder="Nombre">
-          <input type="number" id="new-prod-price" placeholder="Precio">
-          <input type="number" id="new-prod-stock" placeholder="Stock Inicial">
-          <button class="action-btn" onclick="addNewProduct()">Añadir</button>
-        </div>
-      </div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr><th>Código</th><th>Imagen</th><th>Nombre</th><th>Precio</th><th>Stock</th><th class="admin-only">Acciones</th></tr>
-          </thead>
-          <tbody id="product-table-body"></tbody>
-        </table>
-      </div>
-      <button class="action-btn admin-only" style="margin-top: 10px;" onclick="exportData('products')">Exportar JSON</button>
-    </div>
-  </div>
+    // ⚠️ PEGÁ TU KEY REAL ACÁ
+    const SUPABASE_KEY = 'sb_publishable_9ujBRAnvDfBmtrPSNY6hBg__tHkQXX6';
 
-  <!-- Proveedores -->
-  <div class="popup" id="popup-proveedores">
-    <div class="popup-header"><h2>Proveedores</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="add-item-form admin-only">
-        <h3>Nuevo Proveedor</h3>
-        <div class="input-inline">
-          <input type="text" id="prov-name" placeholder="Nombre">
-          <input type="text" id="prov-contact" placeholder="Contacto/Tel">
-          <button class="action-btn" onclick="addSupplier()">Añadir</button>
-        </div>
-      </div>
-      <table class="data-table">
-        <thead><tr><th>Nombre</th><th>Contacto</th><th class="admin-only">Acciones</th></tr></thead>
-        <tbody id="suppliers-table-body"></tbody>
-      </table>
-    </div>
-  </div>
+    const supabase = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+  </script>
 
-  <!-- Compras -->
-  <div class="popup" id="popup-compras">
-    <div class="popup-header"><h2>Registro de Compras</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="add-item-form admin-only">
-        <div class="input-inline">
-          <select id="compra-prov"><option value="">Seleccionar Proveedor</option></select>
-          <input type="text" id="compra-code" placeholder="Código Producto">
-          <input type="number" id="compra-qty" placeholder="Cantidad">
-          <input type="number" id="compra-cost" placeholder="Costo Unitario">
-          <button class="action-btn" onclick="registerPurchase()">Ingresar</button>
-        </div>
-      </div>
-      <h3>Historial de Compras</h3>
-      <table class="data-table">
-        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Producto</th><th>Cant.</th><th>Costo</th></tr></thead>
-        <tbody id="purchases-table-body"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Reportes -->
-  <div class="popup" id="popup-reportes">
-    <div class="popup-header"><h2>Reportes y Estadísticas</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="dashboard-stats">
-        <div class="stat-card"><h3>Ventas Mes</h3><p id="report-sales-month">$0.00</p></div>
-        <div class="stat-card"><h3>Ventas Semana</h3><p id="report-sales-week">$0.00</p></div>
-        <div class="stat-card"><h3>Ingresos Totales</h3><p id="report-income-total">$0.00</p></div>
-      </div>
-      <div style="margin-top: 20px;">
-        <h3>Top 5 Productos más vendidos</h3>
-        <ul id="top-products-list" class="editable-list"></ul>
-      </div>
-      <button class="action-btn admin-only" style="margin-top: 20px;" onclick="exportData('sales')">Exportar Ventas (JSON)</button>
-    </div>
-  </div>
-
-  <!-- Caja -->
-  <div class="popup" id="popup-caja">
-    <div class="popup-header"><h2>Gestión de Caja</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="dashboard-stats" style="margin-bottom: 30px;">
-        <div class="stat-card">
-          <h3>Fondo de Apertura</h3>
-          <p id="caja-monto-apertura" style="font-size: 24px; font-weight: 800;">$0.00</p>
-        </div>
-        <div class="stat-card">
-          <h3>Efectivo en Caja</h3>
-          <p id="caja-monto-total" style="font-size: 24px; font-weight: 800; color: var(--success);">$0.00</p>
-        </div>
-      </div>
-      <div class="add-item-form admin-only" style="margin-bottom: 20px;">
-        <div class="input-inline">
-          <input type="number" id="opening-cash-input-caja" placeholder="Monto de apertura">
-          <button class="action-btn" onclick="setOpeningCash()">Establecer</button>
-        </div>
-      </div>
-      <hr>
-      <div class="form-group" style="margin-top: 20px;">
-        <label>Tipo de Operación</label>
-        <select id="caja-tipo"><option>Ingreso</option><option>Egreso</option></select>
-      </div>
-      <div class="form-group">
-        <label>Monto</label>
-        <input type="number" id="caja-monto" placeholder="0.00">
-      </div>
-      <div class="form-group">
-        <label>Motivo</label>
-        <input type="text" id="caja-motivo" placeholder="Ej: Cambio chico">
-      </div>
-      <button class="action-btn" onclick="registerCajaOp()">Registrar Movimiento</button>
-    </div>
-  </div>
-
-  <!-- Facturacion (Historial de Ventas) -->
-  <div class="popup" id="popup-facturacion">
-    <div class="popup-header"><h2>Historial de Facturación</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <table class="data-table">
-        <thead><tr><th>Código</th><th>Fecha</th><th>Pago</th><th>Total</th><th class="admin-only">Acciones</th></tr></thead>
-        <tbody id="transactions-table-body"></tbody>
-      </table>
-      <button class="action-btn admin-only" style="margin-top:20px; background-color: var(--danger);" onclick="clearTransactions()">Borrar Historial</button>
-    </div>
-  </div>
-
-  <!-- Descuentos y Promociones (existing popups logic remains similar but UI adjusted) -->
-  <div class="popup" id="popup-descuentos">
-    <div class="popup-header"><h2>Descuentos e Impuestos</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="form-group admin-only">
-        <label>IVA Configurable (%)</label>
-        <input type="number" id="iva-config" value="21" onchange="updateIVAConfig(this.value)">
-      </div>
-      <hr>
-      <div class="add-item-form admin-only">
-        <h3>Reglas de Descuento</h3>
-        <div class="input-inline">
-          <input type="text" id="desc-name" placeholder="Medio de Pago">
-          <input type="number" id="desc-value" placeholder="% Descuento">
-          <button class="action-btn" onclick="addDiscountRule()">Añadir</button>
-        </div>
-      </div>
-      <ul class="editable-list" id="discounts-list"></ul>
-    </div>
-  </div>
-
-  <div class="popup" id="popup-promociones">
-    <div class="popup-header"><h2>Promociones Especiales</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div class="add-item-form admin-only">
-        <div class="input-inline">
-          <input type="text" id="promo-code" placeholder="Código">
-          <input type="number" id="promo-take" placeholder="Llevá">
-          <input type="number" id="promo-pay" placeholder="Pagá">
-          <button class="action-btn" onclick="addPromotion()">Añadir</button>
-        </div>
-      </div>
-      <ul class="editable-list" id="promo-list"></ul>
-    </div>
-  </div>
-
-  <!-- Modals -->
-  <div class="popup" id="payment-modal">
-    <div class="popup-header"><h2>Resumen de Cobro</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body">
-      <div id="payment-details" style="text-align: center; font-size: 20px; margin-bottom: 25px;"></div>
-      <button class="checkout-btn" onclick="confirmPayment()">Confirmar y Emitir Ticket</button>
-      <button class="action-btn" style="background: var(--text-muted); width: 100%; margin-top: 10px;" onclick="closePopups()">Cancelar</button>
-    </div>
-  </div>
-
-  <div class="popup" id="checkout-modal">
-    <div class="popup-header"><h2>¡Venta Registrada!</h2><button class="close-btn" onclick="closePopups()"><i class="ri-close-line"></i></button></div>
-    <div class="popup-body" style="text-align: center; padding: 20px;">
-      <i class="ri-checkbox-circle-fill success-icon"></i>
-      <div id="receipt-summary" style="font-family: 'Courier New', Courier, monospace; background: rgba(0,0,0,0.05); padding: 20px; border-radius: 15px; margin: 20px 0; text-align: left; max-height: 300px; overflow-y: auto;"></div>
-      <div style="display: flex; gap: 15px;">
-        <button class="action-btn" style="flex: 1;" onclick="finishCheckout()">Nueva Venta</button>
-        <button class="action-btn" style="flex: 1; background: var(--primary);" onclick="window.print()"><i class="ri-printer-line"></i> Imprimir</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="supabase-client.js"></script>
+  <!-- TU SCRIPT -->
   <script src="script.js"></script>
+
 </body>
+
 </html>
