@@ -1,29 +1,20 @@
 // --- Configuration & State ---
-let products = JSON.parse(localStorage.getItem('pos_products')) || [
-  { code: '001', name: 'Leche Descremada 1L', price: 1200, stock: 50, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=200&q=80' },
-  { code: '002', name: 'Pan Lactal Blanco', price: 950, stock: 30, image: 'https://images.unsplash.com/photo-1598373182133-52452f7691ef?auto=format&fit=crop&w=200&q=80' },
-  { code: '003', name: 'Queso Cremoso x Kg', price: 4500, stock: 15, image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?auto=format&fit=crop&w=200&q=80' },
-  { code: '004', name: 'Gaseosa Cola 2.25L', price: 1500, stock: 100, image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=200&q=80' }
+let products = [];
+let currentUser = null;
+let currentSucursal = null;
+let ivaConfig = 21;
+let suppliers = [];
+let purchases = [];
+let paymentRules = [
+  { id: 'efectivo', name: 'Efectivo', discount: 10 },
+  { id: 'debito', name: 'Tarjeta de Débito', discount: 0 },
+  { id: 'credito', name: 'Tarjeta de Crédito', discount: 0 },
+  { id: 'mercadopago', name: 'Mercado Pago (QR)', discount: 0 }
 ];
-
-// cart removed from here, moved to state section
-let currentUser = JSON.parse(localStorage.getItem('pos_user')) || null;
-let ivaConfig = parseFloat(localStorage.getItem('pos_iva')) || 21;
-let suppliers = JSON.parse(localStorage.getItem('pos_suppliers')) || [];
-let purchases = JSON.parse(localStorage.getItem('pos_purchases')) || [];
-let paymentRules = JSON.parse(localStorage.getItem('pos_payment_rules')) || [];
-if (paymentRules.length === 0) {
-  paymentRules = [
-    { id: 'efectivo', name: 'Efectivo', discount: 10 },
-    { id: 'debito', name: 'Tarjeta de Débito', discount: 0 },
-    { id: 'credito', name: 'Tarjeta de Crédito', discount: 0 },
-    { id: 'mercadopago', name: 'Mercado Pago (QR)', discount: 0 }
-  ];
-}
-let promos = JSON.parse(localStorage.getItem('pos_promos')) || [];
-let transactions = JSON.parse(localStorage.getItem('pos_transactions')) || [];
-let openingCash = parseFloat(localStorage.getItem('pos_opening_cash')) || 0;
-let cart = JSON.parse(localStorage.getItem('pos_cart')) || [];
+let promos = [];
+let transactions = [];
+let openingCash = 0;
+let cart = [];
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,9 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateDate, 1000);
 });
 
-function initApp() {
+async function initApp() {
     updateDate();
-    if (!currentUser) showLogin(); else showMain();
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+        currentUser = { email: session.user.email, role: session.user.user_metadata.role || 'cajero', id: session.user.id };
+        await loadInitialData();
+        showMain();
+    } else {
+        showLogin();
+    }
     
     // Theme
     if (localStorage.getItem('pos_theme') === 'dark') document.body.classList.add('dark');
@@ -45,6 +44,40 @@ function initApp() {
             if (e.key === 'Enter') addProductToCart(codeInput.value);
         });
     }
+}
+
+async function loadInitialData() {
+    // Sucursal
+    const { data: sucursales } = await supabase.from('sucursales').select('*').limit(1);
+    currentSucursal = sucursales[0];
+
+    // Productos
+    const { data: prodData } = await supabase.from('productos').select('*');
+    products = prodData || [];
+
+    // Proveedores
+    const { data: provData } = await supabase.from('proveedores').select('*');
+    suppliers = provData || [];
+
+    // Compras
+    const { data: compData } = await supabase.from('compras').select('*, proveedores(name), detalle_compras(*)');
+    purchases = compData?.map(c => ({
+        date: new Date(c.date).toLocaleDateString(),
+        prov: c.proveedores?.name,
+        prod: 'Varios', // Simplificado para visualización
+        qty: c.detalle_compras?.reduce((sum, d) => sum + d.qty, 0),
+        cost: c.total
+    })) || [];
+
+    // Ventas (Transactions)
+    const { data: salesData } = await supabase.from('ventas').select('*, detalle_ventas(qty, price, productos(name))');
+    transactions = salesData?.map(s => ({
+        code: s.code,
+        date: new Date(s.date).toLocaleString(),
+        method: s.method,
+        total: s.total,
+        items: s.detalle_ventas?.map(d => ({ name: d.productos?.name, qty: d.qty, price: d.price }))
+    })) || [];
 }
 
 function updateDate() {
@@ -66,22 +99,27 @@ function showMain() {
     renderAll();
 }
 
-function handleLogin() {
-    const user = document.getElementById('login-user').value.toLowerCase();
+async function handleLogin() {
+    const email = document.getElementById('login-user').value;
     const pass = document.getElementById('login-pass').value;
 
-    if ((user === 'admin' || user === 'cajero') && pass === '1234') {
-        currentUser = { name: user, role: user };
-        localStorage.setItem('pos_user', JSON.stringify(currentUser));
-        showMain();
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.includes('@') ? email : `${email}@pos.com`, // Fallback for simple usernames
+        password: pass
+    });
+
+    if (error) {
+        alert('Error: ' + error.message);
     } else {
-        alert('Credenciales inválidas (admin/1234 o cajero/1234)');
+        currentUser = { email: data.user.email, role: data.user.user_metadata.role || 'cajero', id: data.user.id };
+        await loadInitialData();
+        showMain();
     }
 }
 
-function handleLogout() {
+async function handleLogout() {
+    await supabase.auth.signOut();
     currentUser = null;
-    localStorage.removeItem('pos_user');
     showLogin();
 }
 
@@ -166,7 +204,6 @@ function changeQty(idx, delta) {
     if (delta > 0 && item.qty + delta > product.stock) { alert('Sin stock suficiente'); return; }
     item.qty += delta;
     if (item.qty <= 0) cart.splice(idx, 1);
-    saveData();
     renderCart();
 }
 
@@ -210,30 +247,57 @@ function openPaymentModal() {
     document.getElementById('overlay').classList.add('active');
 }
 
-function confirmPayment() {
+async function confirmPayment() {
+    if (!cart.length) return;
     const tkCode = 'TK-' + Date.now().toString().slice(-6);
     const totalRaw = document.getElementById('total').textContent;
     const total = parseFloat(totalRaw.replace(/[^0-9.-]+/g, ""));
-    
-    // Decrement Stock
-    cart.forEach(item => {
-        const p = products.find(prod => prod.code === item.code);
-        if (p) p.stock -= item.qty;
-    });
-    
+    const method = document.getElementById('payment-method').value;
+
+    const { data: venta, error: vError } = await supabase.from('ventas').insert([{
+        code: tkCode,
+        total: total,
+        method: method,
+        user_id: currentUser.id,
+        sucursal_id: currentSucursal.id
+    }]).select();
+
+    if (vError) { alert('Error al registrar venta: ' + vError.message); return; }
+
+    const ventaId = venta[0].id;
+    const detalles = cart.map(item => ({
+        venta_id: ventaId,
+        product_id: item.id,
+        qty: item.qty,
+        price: item.price
+    }));
+
+    const { error: dError } = await supabase.from('detalle_ventas').insert(detalles);
+    if (dError) { alert('Error en detalle de venta: ' + dError.message); return; }
+
+    // Update Stock
+    for (const item of cart) {
+        const product = products.find(p => p.id === item.id);
+        if (product) {
+            const newStock = product.stock - item.qty;
+            await supabase.from('productos').update({ stock: newStock }).eq('id', item.id);
+        }
+    }
+
     const tx = {
         code: tkCode,
         date: new Date().toLocaleString(),
-        method: document.getElementById('payment-method').value,
+        method: method,
         total: total,
         items: [...cart]
     };
-    
-    transactions.push(tx);
+
+    transactions.unshift(tx);
     cart = [];
-    saveData();
+    localStorage.removeItem('pos_cart'); // Clean up old cart if any
+    
+    await loadInitialData(); // Refresh state
     showReceipt(tx);
-    finishCheckout();
 }
 
 function showReceipt(tx) {
@@ -256,45 +320,77 @@ function finishCheckout() {
 }
 
 // --- Admin Modules ---
-function addNewProduct() {
+async function addNewProduct() {
     const code = document.getElementById('new-prod-code').value;
     const name = document.getElementById('new-prod-name').value;
     const price = parseFloat(document.getElementById('new-prod-price').value);
     const stock = parseInt(document.getElementById('new-prod-stock').value) || 0;
 
     if (code && name && !isNaN(price)) {
-        products.push({ code, name, price, stock, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80' });
-        saveData();
-        renderAll();
-        alert('Producto añadido');
+        const { error } = await supabase.from('productos').insert([{
+            code, name, price, stock, 
+            image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80',
+            sucursal_id: currentSucursal.id
+        }]);
+
+        if (error) {
+            alert('Error: ' + error.message);
+        } else {
+            await loadInitialData();
+            renderAll();
+            alert('Producto añadido');
+            document.querySelectorAll('#popup-lista input').forEach(i => i.value = '');
+        }
     }
 }
 
-function addSupplier() {
+async function addSupplier() {
     const name = document.getElementById('prov-name').value;
     const contact = document.getElementById('prov-contact').value;
     if (name) {
-        suppliers.push({ name, contact });
-        saveData();
-        renderSuppliers();
+        const { error } = await supabase.from('proveedores').insert([{
+            name, contact, sucursal_id: currentSucursal.id
+        }]);
+        if (error) alert(error.message); else {
+            await loadInitialData();
+            renderSuppliers();
+            document.getElementById('prov-name').value = '';
+            document.getElementById('prov-contact').value = '';
+        }
     }
 }
 
-function registerPurchase() {
-    const prov = document.getElementById('compra-prov').value;
+async function registerPurchase() {
+    const provId = document.getElementById('compra-prov').value;
     const code = document.getElementById('compra-code').value;
     const qty = parseInt(document.getElementById('compra-qty').value);
     const cost = parseFloat(document.getElementById('compra-cost').value);
 
     const prod = products.find(p => p.code === code);
-    if (prod && prov && qty > 0) {
-        prod.stock += qty;
-        purchases.push({ date: new Date().toLocaleDateString(), prov, prod: prod.name, qty, cost });
-        saveData();
+    if (prod && provId && qty > 0) {
+        const { data: compra, error: cError } = await supabase.from('compras').insert([{
+            supplier_id: provId,
+            total: cost * qty,
+            sucursal_id: currentSucursal.id
+        }]).select();
+
+        if (cError) { alert(cError.message); return; }
+
+        await supabase.from('detalle_compras').insert([{
+            compra_id: compra[0].id,
+            product_id: prod.id,
+            qty, cost
+        }]);
+
+        const newStock = prod.stock + qty;
+        await supabase.from('productos').update({ stock: newStock }).eq('id', prod.id);
+
+        await loadInitialData();
         renderAll();
-        alert('Stock actualizado');
+        alert('Stock actualizado y compra registrada');
+        document.querySelectorAll('#popup-compras input').forEach(i => i.value = '');
     } else {
-        alert('Datos de compra inválidos');
+        alert('Datos de compra inválidos o producto no encontrado');
     }
 }
 
@@ -380,20 +476,19 @@ function renderTransactions() {
 
 function populateSelects() {
     const provSelect = document.getElementById('compra-prov');
-    provSelect.innerHTML = '<option value="">Seleccionar Proveedor</option>' + suppliers.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+    if (provSelect) {
+        provSelect.innerHTML = '<option value="">Seleccionar Proveedor</option>' + 
+            suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
     
     const pmSelect = document.getElementById('payment-method');
-    pmSelect.innerHTML = paymentRules.map(r => `<option value="${r.id}">${r.name} (${r.discount}%)</option>`).join('');
+    if (pmSelect) {
+        pmSelect.innerHTML = paymentRules.map(r => `<option value="${r.id}">${r.name} (${r.discount}%)</option>`).join('');
+    }
 }
 
 // --- Utils ---
-function saveData() {
-    localStorage.setItem('pos_products', JSON.stringify(products));
-    localStorage.setItem('pos_suppliers', JSON.stringify(suppliers));
-    localStorage.setItem('pos_purchases', JSON.stringify(purchases));
-    localStorage.setItem('pos_transactions', JSON.stringify(transactions));
-    localStorage.setItem('pos_cart', JSON.stringify(cart));
-}
+// Removed localStorage saveData
 
 function exportData(type) {
     const data = type === 'products' ? products : transactions;
@@ -423,19 +518,24 @@ function toggleDarkMode() {
     localStorage.setItem('pos_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
 }
 
-function deleteProduct(code) {
+async function deleteProduct(code) {
     if (confirm('Eliminar producto?')) {
-        products = products.filter(p => p.code !== code);
-        saveData(); renderProductTable();
+        const prod = products.find(p => p.code === code);
+        if (prod) {
+            const { error } = await supabase.from('productos').delete().eq('id', prod.id);
+            if (error) alert(error.message); else await loadInitialData();
+            renderProductTable();
+        }
     }
 }
 
-function adjustStock(code) {
+async function adjustStock(code) {
     const p = products.find(prod => prod.code === code);
     const newVal = prompt(`Ajustar stock para ${p.name}:`, p.stock);
     if (newVal !== null) {
-        p.stock = parseInt(newVal) || 0;
-        saveData();
+        const stock = parseInt(newVal) || 0;
+        const { error } = await supabase.from('productos').update({ stock }).eq('id', p.id);
+        if (error) alert(error.message); else await loadInitialData();
         renderAll();
     }
 }
@@ -450,14 +550,28 @@ function setOpeningCash() {
     }
 }
 
-function registerCajaOp() {
+async function registerCajaOp() {
     const tipo = document.getElementById('caja-tipo').value;
     const monto = parseFloat(document.getElementById('caja-monto').value);
     const motivo = document.getElementById('caja-motivo').value;
     if (monto > 0) {
-        alert(`Operación de ${tipo} por $${monto} registrada (Motivo: ${motivo})`);
-        document.getElementById('caja-monto').value = '';
-        document.getElementById('caja-motivo').value = '';
+        const { error } = await supabase.from('caja_movimientos').insert([{
+            type: tipo,
+            amount: monto,
+            reason: motivo,
+            user_id: currentUser.id,
+            sucursal_id: currentSucursal.id
+        }]);
+
+        if (error) {
+            alert(error.message);
+        } else {
+            alert(`Operación de ${tipo} por $${monto} registrada`);
+            document.getElementById('caja-monto').value = '';
+            document.getElementById('caja-motivo').value = '';
+            await loadInitialData();
+            renderStats();
+        }
     }
 }
 
