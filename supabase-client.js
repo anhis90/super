@@ -1,11 +1,11 @@
-// 🔗 Configuración Supabase
+// 🔗 Configuración de Supabase
 const SUPABASE_URL = 'https://hhhyexgsfflzzsflpsqs.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9ujBRAnvDfBmtrPSNY6hBg__tHkQXX6';
 
-// ⚠️ REEMPLAZÁ esta key por la nueva que empieza con "sb_publishable_..."
-const SUPABASE_KEY = 'sb_publishable_TU_KEY_AQUI';
-
-// Crear cliente
-const supabase = window.supabase.createClient(
+// Asignamos el cliente inicializado directamente al objeto window
+// Esto evita el error "redeclaration of non-configurable global property supabase" 
+// al no usar const/let que colisionen con el script del CDN, pero permite usarlo globalmente.
+window.supabase = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );

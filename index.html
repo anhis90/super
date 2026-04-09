@@ -16,8 +16,6 @@
   <!-- Iconos -->
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
 
-  <!-- 🔥 Supabase PRIMERO -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -108,20 +106,9 @@
   <!-- OVERLAY -->
   <div id="overlay" onclick="closePopups()"></div>
 
-  <!-- 🔥 CONFIG SUPABASE -->
-  <script>
-    const SUPABASE_URL = 'https://hhhyexgsfflzzsflpsqs.supabase.co';
-
-    // ⚠️ PEGÁ TU KEY REAL ACÁ
-    const SUPABASE_KEY = 'sb_publishable_9ujBRAnvDfBmtrPSNY6hBg__tHkQXX6';
-
-    const supabase = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY
-    );
-  </script>
-
-  <!-- TU SCRIPT -->
+  <!-- 🔥 SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
   <script src="script.js"></script>
 
 </body>
