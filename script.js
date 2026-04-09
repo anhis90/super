@@ -107,18 +107,21 @@ function showMain() {
 }
 
 async function handleLogin() {
-    const email = document.getElementById('login-user').value;
-    const pass = document.getElementById('login-pass').value;
+    const rawEmail = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pass').value.trim();
+
+    const email = rawEmail.includes('@') ? rawEmail : `${rawEmail}@pos.com`; // Fallback for simple usernames
 
     const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.includes('@') ? email : `${email}@pos.com`, // Fallback for simple usernames
+        email: email,
         password: pass
     });
 
     if (error) {
-        alert('Error: ' + error.message);
+        console.error("Login Error:", error);
+        alert('Error al iniciar sesión: ' + error.message + '\n\nSi creaste un usuario nuevo en Supabase, asegúrate de que el "Confirm email" esté desactivado, o que hayas confirmado el correo.');
     } else {
-        currentUser = { email: data.user.email, role: data.user.user_metadata.role || 'cajero', id: data.user.id };
+        currentUser = { email: data.user.email, role: data.user.user_metadata?.role || 'cajero', id: data.user.id };
         await loadInitialData();
         showMain();
     }
