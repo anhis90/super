@@ -53,7 +53,7 @@ CREATE TABLE ventas (
     date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     total DECIMAL(12,2) NOT NULL DEFAULT 0,
     method TEXT NOT NULL,
-    user_id UUID REFERENCES auth.users(id),
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     sucursal_id UUID REFERENCES sucursales(id) ON DELETE CASCADE
 );
 
@@ -90,7 +90,7 @@ CREATE TABLE caja_movimientos (
     type TEXT NOT NULL, -- Ingreso, Egreso
     amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     reason TEXT,
-    user_id UUID REFERENCES auth.users(id),
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     sucursal_id UUID REFERENCES sucursales(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
