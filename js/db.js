@@ -57,22 +57,24 @@ async function loadInitialData() {
   const { data: promoData } = await sb.from('promociones').select('*').eq('sucursal_id', sid);
   promos = promoData || [];
 
-  // 8. Ventas (con detalle e items)
+  // 8. Ventas (con detalle e items — incluimos code para el módulo de IA)
   const { data: salesData } = await sb
     .from('ventas')
-    .select('*, detalle_ventas(qty, price, productos(name))')
+    .select('*, detalle_ventas(qty, price, productos(id, name, code))')
     .eq('sucursal_id', sid)
     .order('date', { ascending: false });
 
   transactions = (salesData || []).map(s => ({
-    code:   s.code,
-    date:   new Date(s.date).toLocaleString('es-AR'),
-    method: s.method,
-    total:  s.total,
-    items:  (s.detalle_ventas || []).map(d => ({
-      name:  d.productos?.name || 'Producto',
-      qty:   d.qty,
-      price: d.price
+    code:    s.code,
+    dateRaw: new Date(s.date),                          // Fecha como objeto Date (lo usa la IA)
+    date:    new Date(s.date).toLocaleString('es-AR'),  // Fecha formateada (la usa la UI)
+    method:  s.method,
+    total:   s.total,
+    items:   (s.detalle_ventas || []).map(d => ({
+      productName: d.productos?.name || 'Producto',   // Nombre (para mostrar)
+      productCode: d.productos?.code || '',           // Código (para matching en IA)
+      qty:         d.qty,
+      price:       d.price
     }))
   }));
 }

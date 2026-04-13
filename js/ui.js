@@ -65,6 +65,8 @@ function renderAll() {
   renderDiscountRules();
   renderPromos();
   renderCart();
+  // Ejecutar análisis de IA después de renderizar todo
+  if (typeof analyzeBusinessData === 'function') analyzeBusinessData();
 }
 
 // ─────────────────────────────────────────────
@@ -282,15 +284,16 @@ function renderStats() {
   const cajaTotalEl = document.getElementById('caja-monto-total');
   if (cajaTotalEl) cajaTotalEl.textContent = `$${totalCash.toFixed(2)}`;
 
-  // Reportes
+  // Total de ingresos (reportes)
   const reportEl = document.getElementById('report-income-total');
   if (reportEl) reportEl.textContent =
     `$${transactions.reduce((s, t) => s + t.total, 0).toFixed(2)}`;
 
-  // Top productos
+  // Top productos en la sección de reportes (usa productName)
   const salesMap = {};
   transactions.forEach(t => t.items.forEach(i => {
-    salesMap[i.name] = (salesMap[i.name] || 0) + i.qty;
+    const key = i.productName || i.name || 'Desconocido';
+    salesMap[key] = (salesMap[key] || 0) + i.qty;
   }));
   const top = Object.entries(salesMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const topEl = document.getElementById('top-products-list');
@@ -341,7 +344,8 @@ function showReceipt(tx) {
     <h3>TICKET PRO — ${tx.code}</h3>
     <p>${tx.date}</p><hr>
     ${tx.items.map(i =>
-      `<div>${i.name} ×${i.qty} — $${(i.price * i.qty).toFixed(2)}</div>`
+      // productName es el campo nuevo; usamos 'name' como fallback para el carrito local
+      `<div>${i.productName || i.name} ×${i.qty} — $${(i.price * i.qty).toFixed(2)}</div>`
     ).join('')}
     <hr>
     <div class="total-p">TOTAL: $${tx.total.toFixed(2)}</div>

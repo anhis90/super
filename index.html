@@ -91,6 +91,9 @@
         <li><button onclick="openPopup('promociones')">
           <i class="ri-megaphone-line"></i> Promociones
         </button></li>
+        <li><button onclick="openPopup('ia')" style="color:var(--primary); font-weight:900;">
+          <i class="ri-brain-line"></i> IA Negocio
+        </button></li>
       </ul>
     </nav>
 
@@ -515,9 +518,43 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
+  <!-- ════════════════════════════════════════════
+       POPUP: 🧠 INTELIGENCIA DEL NEGOCIO
+  ════════════════════════════════════════════ -->
+  <div id="popup-ia" class="popup" style="max-width:860px;">
+    <div class="popup-header">
+      <h2><i class="ri-brain-line"></i> Inteligencia del Negocio</h2>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button class="action-btn" onclick="analyzeBusinessData()" style="padding:10px 18px; font-size:13px;">
+          <i class="ri-refresh-line"></i> Actualizar análisis
+        </button>
+        <button class="close-btn" onclick="closePopups()">&#10005;</button>
+      </div>
+    </div>
+    <div class="popup-body">
+      <!-- Configuración visible de las reglas -->
+      <div class="ai-config-panel">
+        <span><i class="ri-settings-3-line"></i> Reglas activas:</span>
+        <span class="ai-config-badge">Stock mín. ≤ <strong id="ai-cfg-stock">5</strong></span>
+        <span class="ai-config-badge">Análisis: <strong id="ai-cfg-dias">7</strong> días</span>
+        <span class="ai-config-badge">Sin movimiento: <strong id="ai-cfg-dead">30</strong> días</span>
+      </div>
+      <!-- Contenedor donde la IA inyecta los insights -->
+      <div id="ai-insights-container">
+        <div class="ai-empty">
+          <div style="font-size:48px; margin-bottom:12px;">📊</div>
+          <p>Cargando análisis...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini panel de IA en el Dashboard -->
+  <!-- (Se actualiza en popup-inicio al abrir el Dashboard) -->
+
+  <!-- ════════════════════════════════════════════
        MODAL: CONFIRMACIÓN DE COBRO
-  ══════════════════════════════════════════ -->
+  ════════════════════════════════════════════ -->
   <div id="payment-modal" class="popup" style="max-width:450px; text-align:center;">
     <div class="popup-header">
       <h2><i class="ri-bank-card-line"></i> Confirmar Cobro</h2>
@@ -557,11 +594,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- 2. Inicialización del cliente como window.sb -->
   <script src="supabase-client.js"></script>
-  <!-- 3. Módulos de la app (orden: db → auth → ui → cart → app) -->
+  <!-- 3. Módulos de la app (orden: db → auth → ui → cart → ai → app) -->
   <script src="js/db.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/cart.js"></script>
+  <script src="js/ai.js"></script>
   <script src="js/app.js"></script>
 
 </body>
