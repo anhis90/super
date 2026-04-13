@@ -1,3 +1,363 @@
+/*
+  js/ai.js
+
+  Módulo sencillo de "IA" local para el POS.
+  - No usa APIs externas.
+  - Analiza datos locales (globales o localStorage o tablas DOM) y genera:
+    * alertas de stock
+    * top productos (hoy / semana)
+    * recomendaciones de compra
+    * productos sin movimiento
+
+  Cómo funciona:
+  - `analyzeBusinessData()` recorre productos y ventas y actualiza el UI.
+  - Colección de datos buscada (por orden): `window.products`, `window.transactions`,
+    `localStorage.transactions`, tablas DOM `#product-table-body`, `#transactions-table-body`.
+
+  Para adaptar reglas (por ejemplo stock mínimo, días): modificar las constantes
+  STOCK_MIN, ANALYSIS_DAYS, NO_MOVE_DAYS o actualizar los elementos del DOM:
+  - `#ai-cfg-stock` (stock mínimo)
+  - `#ai-cfg-dias` (días de análisis)
+  - `#ai-cfg-dead` (días sin movimiento)
+
+  Exposición:
+  - `window.analyzeBusinessData()` para forzar un re-análisis desde otras partes.
+  - `window.ai = { hookSaleRecorded: fn }` para llamar cuando se confirme una venta.
+
+*/
+
+(function () {
+  'use strict';
+
+  // ----- Configuraciones (fáciles de cambiar) -----
+  let STOCK_MIN = 5;         // stock mínimo por defecto
+  let ANALYSIS_DAYS = 7;     // ventana de análisis para rotación
+  let NO_MOVE_DAYS = 30;     // sin movimiento -> considerar bajar precio
+
+  // Umbrales adicionales
+  const HIGH_ROTATION_THRESHOLD = 5; // unidades vendidas en ANALYSIS_DAYS para considerar "alta rotación"
+
+  // ----- Helpers para lectura de datos -----
+  function tryParseJSON(v) {
+    try { return JSON.parse(v); } catch (e) { return null; }
+  }
+
+  // Intentar obtener productos desde distintas fuentes
+  function getProducts() {
+    if (window.products && Array.isArray(window.products)) return window.products;
+
+    // localStorage fallback
+    const ls = tryParseJSON(localStorage.getItem('products'));
+    if (Array.isArray(ls)) return ls;
+
+    // Intentar leer la tabla DOM (#product-table-body)
+    const tbody = document.getElementById('product-table-body');
+    if (tbody) {
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const products = rows.map(tr => {
+        const tds = tr.querySelectorAll('td');
+        return {
+          code: tds[0]?.innerText?.trim() || '',
+          img: tds[1]?.querySelector('img')?.src || '',
+          name: tds[2]?.innerText?.trim() || '',
+          price: parseFloat((tds[3]?.innerText || '').replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0,
+          stock: parseInt(tds[4]?.innerText?.trim()) || 0
+        };
+      });
+      if (products.length) return products;
+    }
+
+    return [];
+  }
+
+  // Intentar obtener transacciones/ventas
+  // Espera arrays donde cada transacción puede tener {id,date,items:[{code,name,qty}], total}
+  function getTransactions() {
+    if (window.transactions && Array.isArray(window.transactions)) return window.transactions;
+    if (window.sales && Array.isArray(window.sales)) return window.sales;
+
+    const ls = tryParseJSON(localStorage.getItem('transactions')) || tryParseJSON(localStorage.getItem('sales'));
+    if (Array.isArray(ls)) return ls;
+
+    // Intento leer la tabla de transacciones (si existe)
+    const tbody = document.getElementById('transactions-table-body');
+    if (tbody) {
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      // No todas las implementaciones incluyen items; aquí se crean entradas resumidas
+      const txs = rows.map(tr => {
+        const tds = tr.querySelectorAll('td');
+        const code = tds[0]?.innerText?.trim() || '';
+        const dateText = tds[1]?.innerText?.trim() || '';
+        const date = new Date(dateText || Date.now()).toISOString();
+        const total = parseFloat((tds[3]?.innerText || '').replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0;
+        return { id: code + '_' + date, date, total, items: [] };
+      });
+      if (txs.length) return txs;
+    }
+
+    return [];
+  }
+
+  function parseISO(d) {
+    const dd = new Date(d);
+    return isNaN(dd) ? new Date() : dd;
+  }
+
+  function daysAgo(dateStr) {
+    const d = parseISO(dateStr);
+    const ms = Date.now() - d.getTime();
+    return Math.floor(ms / (1000 * 60 * 60 * 24));
+  }
+
+  function formatCurrency(v) {
+    return isNaN(v) ? '$0.00' : '$' + v.toFixed(2);
+  }
+
+  // ----- Lógica de análisis -----
+  function computeTopProducts(transactions, days) {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const counter = {}; // code -> {name, qty}
+
+    transactions.forEach(tx => {
+      const txDate = parseISO(tx.date).getTime();
+      if (txDate < cutoff) return;
+      const items = Array.isArray(tx.items) ? tx.items : [];
+      items.forEach(it => {
+        const code = it.code || it.id || it.sku || it.name;
+        if (!code) return;
+        counter[code] = counter[code] || { name: it.name || code, qty: 0 };
+        counter[code].qty += Number(it.qty || 0);
+      });
+    });
+
+    const arr = Object.keys(counter).map(k => ({ code: k, name: counter[k].name, qty: counter[k].qty }));
+    arr.sort((a, b) => b.qty - a.qty);
+    return arr;
+  }
+
+  function detectLowStock(products, txsInPeriod) {
+    // txsInPeriod: map code -> qty sold in period
+    const alerts = [];
+    products.forEach(p => {
+      const sold = txsInPeriod[p.code] || 0;
+      if ((p.stock || 0) <= STOCK_MIN) {
+        const msg = `⚠️ Reponer urgente: ${p.name} (se vende ${sold} en últimos ${ANALYSIS_DAYS}d y queda ${p.stock || 0} unidades)`;
+        alerts.push({ product: p, reason: 'low_stock', message: msg, sold });
+      }
+    });
+    return alerts;
+  }
+
+  function recommendPurchases(products, txCountMap) {
+    const recs = [];
+    products.forEach(p => {
+      const sold = txCountMap[p.code] || 0;
+      if (sold >= HIGH_ROTATION_THRESHOLD && (p.stock || 0) <= STOCK_MIN) {
+        const suggested = Math.max(Math.ceil(sold * 1.5), 5);
+        const message = `Comprar ${suggested} unidades de ${p.name} (alta rotación: ${sold} vendidas en ${ANALYSIS_DAYS} días)`;
+        recs.push({ product: p, suggested, message });
+      }
+    });
+    return recs;
+  }
+
+  function detectNoMovement(products, transactions) {
+    const lastSaleByCode = {}; // code -> lastDate
+    transactions.forEach(tx => {
+      const date = parseISO(tx.date).toISOString();
+      const items = Array.isArray(tx.items) ? tx.items : [];
+      items.forEach(it => {
+        const code = it.code || it.id || it.sku || it.name;
+        if (!code) return;
+        const prev = lastSaleByCode[code];
+        if (!prev || new Date(date) > new Date(prev)) lastSaleByCode[code] = date;
+      });
+    });
+
+    const dead = [];
+    products.forEach(p => {
+      const last = lastSaleByCode[p.code];
+      if (!last) {
+        // Nunca vendido
+        dead.push({ product: p, days: null, message: `⚠️ ${p.name} no tiene ventas registradas. Considerar promoción.` });
+      } else {
+        const d = daysAgo(last);
+        if (d >= NO_MOVE_DAYS) {
+          dead.push({ product: p, days: d, message: `⚠️ ${p.name} no se vende desde hace ${d} días. Considerar bajar precio.` });
+        }
+      }
+    });
+    return dead;
+  }
+
+  // ----- Renderizado UI -----
+  function renderInsights(insights) {
+    const container = document.getElementById('ai-insights-container');
+    if (!container) return;
+    container.innerHTML = ''; // limpiamos
+
+    // Alertas urgentes
+    if (insights.alerts.length) {
+      const ul = document.createElement('ul');
+      ul.style.paddingLeft = '18px';
+      insights.alerts.forEach(a => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '8px';
+        li.innerText = a.message;
+        ul.appendChild(li);
+      });
+      const h = document.createElement('h3'); h.innerText = 'Alertas';
+      container.appendChild(h);
+      container.appendChild(ul);
+    } else {
+      const p = document.createElement('p'); p.innerText = 'No hay alertas.'; container.appendChild(p);
+    }
+
+    // Recomendaciones de compra
+    if (insights.recommendations.length) {
+      const h = document.createElement('h3'); h.innerText = 'Recomendaciones de Compra';
+      container.appendChild(h);
+      const ul = document.createElement('ul'); ul.style.paddingLeft = '18px';
+      insights.recommendations.forEach(r => {
+        const li = document.createElement('li'); li.innerText = r.message; ul.appendChild(li);
+      });
+      container.appendChild(ul);
+    }
+
+    // Productos sin movimiento
+    if (insights.deadProducts.length) {
+      const h = document.createElement('h3'); h.innerText = 'Productos sin movimiento';
+      container.appendChild(h);
+      const ul = document.createElement('ul'); ul.style.paddingLeft = '18px';
+      insights.deadProducts.forEach(d => {
+        const li = document.createElement('li'); li.innerText = d.message; ul.appendChild(li);
+      });
+      container.appendChild(ul);
+    }
+
+    // Top productos (hoy / semana)
+    const hTop = document.createElement('h3'); hTop.innerText = 'Top productos'; container.appendChild(hTop);
+    const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.gap = '16px';
+
+    const makeList = (arr, title) => {
+      const box = document.createElement('div'); box.style.flex = '1';
+      const t = document.createElement('p'); t.style.color = 'var(--text-muted)'; t.innerText = title; box.appendChild(t);
+      const ul = document.createElement('ul'); ul.style.paddingLeft = '18px';
+      arr.slice(0, 6).forEach(i => { const li = document.createElement('li'); li.innerText = `${i.name} — ${i.qty}`; ul.appendChild(li); });
+      box.appendChild(ul);
+      return box;
+    };
+
+    wrap.appendChild(makeList(insights.topToday, 'Hoy'));
+    wrap.appendChild(makeList(insights.topWeek, 'Semana'));
+    container.appendChild(wrap);
+  }
+
+  // ----- Función central expuesta -----
+  async function analyzeBusinessData() {
+    // Actualizar configuración desde UI si existe
+    const cfgStock = parseInt(document.getElementById('ai-cfg-stock')?.innerText || STOCK_MIN);
+    const cfgDias = parseInt(document.getElementById('ai-cfg-dias')?.innerText || ANALYSIS_DAYS);
+    const cfgDead = parseInt(document.getElementById('ai-cfg-dead')?.innerText || NO_MOVE_DAYS);
+    STOCK_MIN = isNaN(cfgStock) ? STOCK_MIN : cfgStock;
+    ANALYSIS_DAYS = isNaN(cfgDias) ? ANALYSIS_DAYS : cfgDias;
+    NO_MOVE_DAYS = isNaN(cfgDead) ? NO_MOVE_DAYS : cfgDead;
+
+    const products = getProducts();
+    const transactions = getTransactions();
+
+    // Map de ventas por producto en ventana ANALYSIS_DAYS
+    const cutoff = Date.now() - (ANALYSIS_DAYS * 24 * 60 * 60 * 1000);
+    const txCountMap = {}; // code -> qty
+    transactions.forEach(tx => {
+      const tdate = parseISO(tx.date).getTime();
+      if (tdate < cutoff) return;
+      const items = Array.isArray(tx.items) ? tx.items : [];
+      items.forEach(it => {
+        const code = it.code || it.id || it.sku || it.name;
+        if (!code) return;
+        txCountMap[code] = (txCountMap[code] || 0) + Number(it.qty || 0);
+      });
+    });
+
+    const topToday = computeTopProducts(transactions, 1);
+    const topWeek = computeTopProducts(transactions, 7);
+
+    const alerts = detectLowStock(products, txCountMap);
+    const recommendations = recommendPurchases(products, txCountMap);
+    const deadProducts = detectNoMovement(products, transactions);
+
+    const insights = { alerts, recommendations, deadProducts, topToday, topWeek };
+
+    // Actualizar UI
+    renderInsights(insights);
+
+    // Mini panel updates
+    const aiAlertsElem = document.getElementById('ai-mini-alerts');
+    if (aiAlertsElem) aiAlertsElem.innerText = String(alerts.length || 0);
+    const aiTopToday = document.getElementById('ai-mini-top-today');
+    if (aiTopToday) {
+      aiTopToday.innerHTML = '';
+      topToday.slice(0,5).forEach(i => { const li = document.createElement('li'); li.innerText = `${i.name} (${i.qty})`; aiTopToday.appendChild(li); });
+    }
+
+    // Dashboard main updates (si existen elementos)
+    const lowStockCountElem = document.getElementById('dashboard-low-stock');
+    if (lowStockCountElem) lowStockCountElem.innerText = String(alerts.length || 0);
+
+    const topProductsList = document.getElementById('top-products-list');
+    if (topProductsList) {
+      topProductsList.innerHTML = '';
+      topWeek.slice(0,8).forEach(p => { const li = document.createElement('li'); li.innerText = `${p.name} — ${p.qty}`; topProductsList.appendChild(li); });
+    }
+
+    return insights;
+  }
+
+  // ----- Integración / Observadores -----
+  // Exponer función global
+  window.analyzeBusinessData = analyzeBusinessData;
+
+  // Hook que otras partes del app pueden llamar después de registrar una venta
+  window.ai = window.ai || {};
+  window.ai.hookSaleRecorded = function (sale) {
+    // sale puede ser el objeto de la transacción recién creada
+    // Se recomienda que quien registra la venta haga: window.ai.hookSaleRecorded(tx);
+    // Simplemente re-analizamos (puede optimizarse si se necesita)
+    try { analyzeBusinessData(); } catch (e) { console.error('AI hook error', e); }
+  };
+
+  // Observador DOM: si cambian tablas de transacciones o productos, re-analizar
+  function observeTable(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      const mo = new MutationObserver(() => { analyzeBusinessData(); });
+      mo.observe(el, { childList: true, subtree: true });
+    } catch (e) { /* no crítico */ }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    // Pequeño retraso para que otros módulos terminen de inicializar
+    setTimeout(() => { analyzeBusinessData(); }, 600);
+    observeTable('transactions-table-body');
+    observeTable('product-table-body');
+  });
+
+  // También tratar de reaccionar a cambios en localStorage (si la app guarda ahí)
+  window.addEventListener('storage', (e) => {
+    if (e.key && (e.key.includes('transactions') || e.key.includes('products') || e.key.includes('sales'))) {
+      analyzeBusinessData();
+    }
+  });
+
+  // Exponer algunas constantes para que el usuario pueda modificarlas desde consola
+  window.aiConfig = {
+    setStockMin(v) { STOCK_MIN = Number(v); document.getElementById('ai-cfg-stock') && (document.getElementById('ai-cfg-stock').innerText = String(STOCK_MIN)); },
+    setAnalysisDays(v) { ANALYSIS_DAYS = Number(v); document.getElementById('ai-cfg-dias') && (document.getElementById('ai-cfg-dias').innerText = String(ANALYSIS_DAYS)); },
+    setNoMoveDays(v) { NO_MOVE_DAYS = Number(v); document.getElementById('ai-cfg-dead') && (document.getElementById('ai-cfg-dead').innerText = String(NO_MOVE_DAYS)); }
+  };
+
+})();
 // ============================================================
 // js/ai.js
 // 🧠 Módulo de Inteligencia de Negocio
