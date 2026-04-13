@@ -5,63 +5,105 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super POS Pro</title>
+  <meta name="description" content="Sistema de punto de venta profesional con gestión de stock, caja y reportes.">
 
-  <link rel="stylesheet" href="style.css">
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
 
   <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 
-  <!-- Iconos -->
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
-
+  <!-- Iconos Remix -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
 </head>
 
 <body>
 
-  <!-- LOGIN -->
-  <div id="login-screen" class="login-overlay">
-    <div class="login-card">
-      <div class="logo" style="margin-bottom: 20px;">Super<span>POS</span> Pro</div>
+  <!-- ══════════════════════════════════════════
+       PANTALLA DE LOGIN
+       Sin Supabase Auth — validación local
+  ══════════════════════════════════════════ -->
+  <div id="login-screen" class="login-overlay" style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
+    <div class="login-card" style="width:100%; max-width:420px;">
+      <div class="logo" style="margin-bottom:30px; text-align:center;">
+        Super<span>POS</span> Pro
+      </div>
+
       <div class="form-group">
         <label>Usuario</label>
-        <input type="text" id="login-user" placeholder="admin o cajero">
+        <input type="text" id="login-user" placeholder="admin o cajero" autocomplete="username">
       </div>
+
       <div class="form-group">
         <label>Contraseña</label>
-        <input type="password" id="login-pass" value="1234">
+        <input type="password" id="login-pass" placeholder="••••" autocomplete="current-password"
+          onkeypress="if(event.key==='Enter') handleLogin()">
       </div>
-      <button class="checkout-btn" onclick="handleLogin()">Ingresar</button>
+
+      <!-- Mensaje de error de login -->
+      <div id="login-error" style="display:none; color:var(--danger); font-weight:700; margin-bottom:15px; text-align:center;"></div>
+
+      <button class="checkout-btn" onclick="handleLogin()" id="btn-login">
+        <i class="ri-login-box-line"></i> Ingresar
+      </button>
+
+      <p style="text-align:center; margin-top:20px; color:var(--text-muted); font-size:13px;">
+        Usuario: <strong>admin</strong> o <strong>cajero</strong> / Contraseña: <strong>1234</strong>
+      </p>
     </div>
   </div>
 
-  <!-- APP -->
-  <div class="app-container" id="main-app" style="display: none;">
+  <!-- ══════════════════════════════════════════
+       APP PRINCIPAL
+  ══════════════════════════════════════════ -->
+  <div class="app-container" id="main-app" style="display:none;">
 
     <!-- SIDEBAR -->
     <nav class="sidebar">
       <div class="logo">Super<span>POS</span></div>
       <ul class="nav-links">
-        <li><button onclick="openPopup('inicio')"><i class="ri-home-4-line"></i> Inicio</button></li>
-        <li><button onclick="openPopup('lista')"><i class="ri-list-check"></i> Productos</button></li>
-        <li><button onclick="openPopup('proveedores')"><i class="ri-truck-line"></i> Proveedores</button></li>
-        <li><button onclick="openPopup('compras')"><i class="ri-shopping-bag-3-line"></i> Compras</button></li>
-        <li><button onclick="openPopup('facturacion')"><i class="ri-file-list-3-line"></i> Facturación</button></li>
-        <li><button onclick="openPopup('caja')"><i class="ri-wallet-3-line"></i> Caja</button></li>
-        <li><button onclick="openPopup('reportes')"><i class="ri-bar-chart-box-line"></i> Reportes</button></li>
-        <li><button onclick="openPopup('descuentos')"><i class="ri-percent-line"></i> Descuentos</button></li>
-        <li><button onclick="openPopup('promociones')"><i class="ri-megaphone-line"></i> Promociones</button></li>
+        <li><button onclick="openPopup('inicio')">
+          <i class="ri-dashboard-3-line"></i> Dashboard
+        </button></li>
+        <li><button onclick="openPopup('lista')">
+          <i class="ri-list-check"></i> Productos
+        </button></li>
+        <li><button onclick="openPopup('proveedores')">
+          <i class="ri-truck-line"></i> Proveedores
+        </button></li>
+        <li><button onclick="openPopup('compras')">
+          <i class="ri-shopping-bag-3-line"></i> Compras
+        </button></li>
+        <li><button onclick="openPopup('facturacion')">
+          <i class="ri-file-list-3-line"></i> Facturación
+        </button></li>
+        <li><button onclick="openPopup('caja')">
+          <i class="ri-wallet-3-line"></i> Caja
+        </button></li>
+        <li><button onclick="openPopup('reportes')">
+          <i class="ri-bar-chart-box-line"></i> Reportes
+        </button></li>
+        <li><button onclick="openPopup('descuentos')">
+          <i class="ri-percent-line"></i> Descuentos
+        </button></li>
+        <li><button onclick="openPopup('promociones')">
+          <i class="ri-megaphone-line"></i> Promociones
+        </button></li>
       </ul>
     </nav>
 
-    <!-- MAIN -->
+    <!-- CONTENIDO PRINCIPAL (POS) -->
     <main class="main-content">
       <header>
         <div class="header-main">
-          <h1>Punto de Venta <span id="user-role-badge" class="badge">Cajero</span></h1>
+          <h1>
+            Punto de Venta
+            <span id="user-role-badge" class="badge">Cajero</span>
+          </h1>
           <div class="header-actions">
-            <button onclick="toggleDarkMode()" class="icon-btn">
+            <button onclick="toggleDarkMode()" class="icon-btn" title="Cambiar tema">
               <i class="ri-moon-line"></i>
             </button>
             <button class="logout-btn" onclick="handleLogout()">
@@ -72,45 +114,455 @@
         <div class="current-date" id="date-display"></div>
       </header>
 
-      <!-- POS -->
+      <!-- GRILLA POS: Buscador + Carrito -->
       <div class="pos-grid">
 
-        <!-- BUSCADOR -->
+        <!-- BUSCADOR / ESCÁNER -->
         <div class="scanner-section">
-          <div class="input-group">
-            <input type="text" id="product-code" placeholder="Buscar producto..." oninput="searchProducts(this.value)">
+          <!-- Wrapper relativo para que el dropdown se posicione correctamente -->
+          <div style="position:relative;">
+            <div class="input-group">
+              <input type="text" id="product-code"
+                placeholder="🔍 Buscar producto por nombre o código..."
+                oninput="searchProducts(this.value)"
+                autocomplete="off">
+            </div>
+            <!-- Dropdown de resultados de búsqueda -->
+            <div id="search-results" style="
+              display:none;
+              position:absolute;
+              top:100%;
+              left:0;
+              right:0;
+              background:var(--glass-white);
+              backdrop-filter:var(--blur);
+              border:1px solid var(--glass-border);
+              border-radius:16px;
+              max-height:250px;
+              overflow-y:auto;
+              z-index:200;
+              box-shadow:var(--shadow-lg);
+              margin-top:8px;
+            "></div>
           </div>
-          <div id="search-results"></div>
-          <div id="product-preview"></div>
+          <!-- Preview del último producto escaneado -->
+          <div id="product-preview" class="product-preview" style="flex:1; display:flex; align-items:center; justify-content:center;">
+            <p style="color:var(--text-muted); font-size:16px;">
+              <i class="ri-barcode-line" style="font-size:48px; display:block; margin-bottom:10px;"></i>
+              Buscá o escaneá un producto
+            </p>
+          </div>
         </div>
 
         <!-- CARRITO -->
         <div class="cart-section">
-          <h2>Carrito</h2>
-          <div id="cart-items"></div>
-
-          <div>
-            <p>Subtotal: <span id="subtotal">$0</span></p>
-            <p>IVA: <span id="iva-amount">$0</span></p>
-            <p>Total: <span id="total">$0</span></p>
+          <div class="cart-header">
+            <h2><i class="ri-shopping-cart-2-line"></i> Carrito</h2>
           </div>
+          <div class="cart-items" id="cart-items"></div>
 
-          <select id="payment-method"></select>
-          <button onclick="openPaymentModal()">Cobrar</button>
+          <!-- RESUMEN DE TOTALES -->
+          <div class="cart-summary">
+            <div class="summary-row">
+              <span>Subtotal</span>
+              <span id="subtotal">$0.00</span>
+            </div>
+            <div class="summary-row" id="discount-row" style="display:none; color:var(--success);">
+              <span>Descuento (<span id="discount-percent">0</span>%)</span>
+              <span id="discount-amount">-$0.00</span>
+            </div>
+            <div class="summary-row">
+              <span>IVA (<span id="iva-label"></span>%)</span>
+              <span id="iva-amount">$0.00</span>
+            </div>
+            <div class="summary-row total">
+              <span>TOTAL</span>
+              <span id="total">$0.00</span>
+            </div>
+
+            <!-- Método de pago -->
+            <select id="payment-method" class="form-group" style="margin-top:15px; width:100%;"
+              onchange="renderCart()">
+            </select>
+
+            <button class="checkout-btn" onclick="openPaymentModal()" id="btn-cobrar">
+              <i class="ri-bank-card-line"></i> Cobrar
+            </button>
+          </div>
         </div>
 
-      </div>
+      </div><!-- /pos-grid -->
     </main>
+  </div><!-- /app-container -->
+
+
+  <!-- ══════════════════════════════════════════
+       OVERLAY (fondo oscuro de popups)
+  ══════════════════════════════════════════ -->
+  <div id="overlay" class="overlay" onclick="closePopups()"></div>
+
+
+  <!-- ══════════════════════════════════════════
+       POPUP: DASHBOARD / INICIO
+  ══════════════════════════════════════════ -->
+  <div id="popup-inicio" class="popup">
+    <div class="popup-header">
+      <h2><i class="ri-dashboard-3-line"></i> Dashboard</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <p style="color:var(--text-muted); font-size:13px;">💰 Ventas Hoy</p>
+          <h2 id="dashboard-ventas-dia" style="font-size:32px; font-weight:900;">$0.00</h2>
+        </div>
+        <div class="stat-card">
+          <p style="color:var(--text-muted); font-size:13px;">📊 Operaciones Hoy</p>
+          <h2 id="dashboard-operaciones" style="font-size:32px; font-weight:900;">0</h2>
+        </div>
+        <div class="stat-card">
+          <p style="color:var(--text-muted); font-size:13px;">⚠️ Stock Bajo</p>
+          <h2 id="dashboard-low-stock" style="font-size:32px; font-weight:900;">0</h2>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- OVERLAY -->
-  <div id="overlay" onclick="closePopups()"></div>
+  <!-- ══════════════════════════════════════════
+       POPUP: LISTA DE PRODUCTOS
+  ══════════════════════════════════════════ -->
+  <div id="popup-lista" class="popup" style="max-width:900px;">
+    <div class="popup-header">
+      <h2><i class="ri-list-check"></i> Gestión de Productos</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <!-- Formulario alta de producto (solo admin) -->
+      <div class="admin-only" style="margin-bottom:20px;">
+        <h4 style="margin-bottom:10px;">➕ Nuevo Producto</h4>
+        <div class="input-inline">
+          <input type="text"   id="new-prod-code"  placeholder="Código (ej: 001)">
+          <input type="text"   id="new-prod-name"  placeholder="Nombre del producto">
+          <input type="number" id="new-prod-price" placeholder="Precio $" min="0" step="0.01">
+          <input type="number" id="new-prod-stock" placeholder="Stock inicial" min="0">
+          <button class="action-btn" onclick="addNewProduct()">
+            <i class="ri-add-line"></i> Agregar
+          </button>
+        </div>
+      </div>
 
-  <!-- 🔥 SCRIPTS -->
+      <!-- Tabla de productos -->
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Img</th>
+            <th>Nombre</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th class="admin-only">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="product-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: PROVEEDORES
+  ══════════════════════════════════════════ -->
+  <div id="popup-proveedores" class="popup">
+    <div class="popup-header">
+      <h2><i class="ri-truck-line"></i> Proveedores</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div class="admin-only" style="margin-bottom:20px;">
+        <h4 style="margin-bottom:10px;">➕ Nuevo Proveedor</h4>
+        <div class="input-inline">
+          <input type="text" id="prov-name"    placeholder="Nombre del proveedor">
+          <input type="text" id="prov-contact" placeholder="Teléfono / Email">
+          <button class="action-btn" onclick="addSupplier()">
+            <i class="ri-add-line"></i> Agregar
+          </button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Contacto</th>
+            <th class="admin-only">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="suppliers-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: COMPRAS / INGRESO DE STOCK
+  ══════════════════════════════════════════ -->
+  <div id="popup-compras" class="popup">
+    <div class="popup-header">
+      <h2><i class="ri-shopping-bag-3-line"></i> Compras / Ingreso de Stock</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div class="admin-only" style="margin-bottom:20px;">
+        <h4 style="margin-bottom:10px;">📦 Registrar Compra</h4>
+        <div class="form-group">
+          <label>Proveedor</label>
+          <select id="compra-prov"></select>
+        </div>
+        <div class="input-inline">
+          <input type="text"   id="compra-code" placeholder="Código producto">
+          <input type="number" id="compra-qty"  placeholder="Cantidad" min="1">
+          <input type="number" id="compra-cost" placeholder="Costo unitario $" min="0" step="0.01">
+          <button class="action-btn" onclick="registerPurchase()">
+            <i class="ri-add-line"></i> Registrar
+          </button>
+        </div>
+      </div>
+
+      <h4 style="margin-bottom:10px;">📋 Historial de Compras</h4>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Proveedor</th>
+            <th>Producto</th>
+            <th>Cant.</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="purchases-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: FACTURACIÓN / HISTORIAL DE VENTAS
+  ══════════════════════════════════════════ -->
+  <div id="popup-facturacion" class="popup" style="max-width:900px;">
+    <div class="popup-header">
+      <h2><i class="ri-file-list-3-line"></i> Historial de Ventas</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+        <button class="action-btn" onclick="exportData('transactions')">
+          <i class="ri-download-line"></i> Exportar JSON
+        </button>
+        <button class="action-btn admin-only" onclick="clearTransactions()"
+          style="background:var(--danger-gradient);">
+          <i class="ri-delete-bin-line"></i> Borrar historial
+        </button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Fecha</th>
+            <th>Método</th>
+            <th>Total</th>
+            <th class="admin-only">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="transactions-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: CAJA
+  ══════════════════════════════════════════ -->
+  <div id="popup-caja" class="popup">
+    <div class="popup-header">
+      <h2><i class="ri-wallet-3-line"></i> Caja</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <!-- Resumen de caja -->
+      <div class="dashboard-stats" style="margin-bottom:25px;">
+        <div class="stat-card">
+          <p style="color:var(--text-muted); font-size:13px;">Apertura de Caja</p>
+          <h2 id="caja-monto-apertura" style="font-size:28px; font-weight:900;">$0.00</h2>
+        </div>
+        <div class="stat-card">
+          <p style="color:var(--text-muted); font-size:13px;">Total en Caja</p>
+          <h2 id="caja-monto-total" style="font-size:28px; font-weight:900;">$0.00</h2>
+        </div>
+      </div>
+
+      <!-- Establecer apertura (solo admin) -->
+      <div class="admin-only" style="margin-bottom:20px;">
+        <h4 style="margin-bottom:10px;">💵 Monto de Apertura</h4>
+        <div class="input-inline">
+          <input type="number" id="opening-cash-input-caja" placeholder="Monto inicial $" min="0" step="0.01">
+          <button class="action-btn" onclick="setOpeningCash()">Establecer</button>
+        </div>
+      </div>
+
+      <!-- Registrar movimiento -->
+      <div class="admin-only">
+        <h4 style="margin-bottom:10px;">📝 Registrar Movimiento</h4>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="caja-tipo">
+            <option value="Ingreso">Ingreso</option>
+            <option value="Egreso">Egreso</option>
+          </select>
+        </div>
+        <div class="input-inline">
+          <input type="number" id="caja-monto"  placeholder="Monto $" min="0" step="0.01">
+          <input type="text"   id="caja-motivo" placeholder="Motivo / descripción">
+          <button class="action-btn" onclick="registerCajaOp()">
+            <i class="ri-check-line"></i> Registrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: REPORTES
+  ══════════════════════════════════════════ -->
+  <div id="popup-reportes" class="popup">
+    <div class="popup-header">
+      <h2><i class="ri-bar-chart-box-line"></i> Reportes</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div class="dashboard-stats" style="margin-bottom:25px;">
+        <div class="stat-card">
+          <p style="color:var(--text-muted); font-size:13px;">💰 Ingresos Totales</p>
+          <h2 id="report-income-total" style="font-size:28px; font-weight:900;">$0.00</h2>
+        </div>
+      </div>
+
+      <h4 style="margin-bottom:15px;">🏆 Productos más vendidos</h4>
+      <ul id="top-products-list" class="editable-list"></ul>
+
+      <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
+        <button class="action-btn" onclick="exportData('products')">
+          <i class="ri-download-line"></i> Exportar Productos
+        </button>
+        <button class="action-btn" onclick="exportData('transactions')">
+          <i class="ri-download-line"></i> Exportar Ventas
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: DESCUENTOS / MÉTODOS DE PAGO
+  ══════════════════════════════════════════ -->
+  <div id="popup-descuentos" class="popup">
+    <div class="popup-header">
+      <h2><i class="ri-percent-line"></i> Métodos de Pago y Descuentos</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div class="admin-only" style="margin-bottom:20px;">
+        <h4 style="margin-bottom:10px;">➕ Agregar Método de Pago</h4>
+        <div class="input-inline">
+          <input type="text"   id="desc-name"  placeholder="Ej: Tarjeta de Crédito">
+          <input type="number" id="desc-value" placeholder="Descuento %" min="0" max="100" step="0.1">
+          <button class="action-btn" onclick="addDiscountRule()">
+            <i class="ri-add-line"></i> Agregar
+          </button>
+        </div>
+      </div>
+
+      <h4 style="margin-bottom:10px;">📋 Métodos activos</h4>
+      <ul id="discounts-list" class="editable-list"></ul>
+
+      <!-- Configuración IVA (solo admin) -->
+      <div class="admin-only" style="margin-top:25px;">
+        <h4 style="margin-bottom:10px;">🧾 Configuración de IVA</h4>
+        <div class="input-inline">
+          <input type="number" id="iva-config-input" placeholder="IVA %" min="0" max="100" step="0.1"
+            onchange="updateIVAConfig(this.value)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: PROMOCIONES
+  ══════════════════════════════════════════ -->
+  <div id="popup-promociones" class="popup">
+    <div class="popup-header">
+      <h2><i class="ri-megaphone-line"></i> Promociones</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div class="admin-only" style="margin-bottom:20px;">
+        <h4 style="margin-bottom:10px;">➕ Nueva Promoción "Llevá X, Pagá Y"</h4>
+        <div class="input-inline">
+          <input type="text"   id="promo-code" placeholder="Código de producto">
+          <input type="number" id="promo-take" placeholder="Llevá (ej: 3)" min="2">
+          <input type="number" id="promo-pay"  placeholder="Pagá (ej: 2)" min="1">
+          <button class="action-btn" onclick="addPromotion()">
+            <i class="ri-add-line"></i> Agregar
+          </button>
+        </div>
+      </div>
+
+      <h4 style="margin-bottom:10px;">📋 Promociones activas</h4>
+      <ul id="promo-list" class="editable-list"></ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MODAL: CONFIRMACIÓN DE COBRO
+  ══════════════════════════════════════════ -->
+  <div id="payment-modal" class="popup" style="max-width:450px; text-align:center;">
+    <div class="popup-header">
+      <h2><i class="ri-bank-card-line"></i> Confirmar Cobro</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body" style="padding:20px 0;">
+      <div id="payment-details" style="font-size:20px; margin-bottom:30px; line-height:1.8;"></div>
+      <button class="checkout-btn" onclick="confirmPayment()" id="btn-confirm-payment">
+        <i class="ri-check-double-line"></i> Confirmar y Cobrar
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MODAL: TICKET / RECIBO
+  ══════════════════════════════════════════ -->
+  <div id="checkout-modal" class="popup" style="max-width:450px; text-align:center;">
+    <div class="popup-header">
+      <h2><i class="ri-receipt-line"></i> Ticket</h2>
+      <button class="close-btn" onclick="finishCheckout()">✕</button>
+    </div>
+    <div class="popup-body" style="padding:20px 0;">
+      <div class="success-icon">✓</div>
+      <div id="receipt-summary" style="text-align:left; margin:20px 0; font-size:15px; line-height:1.8;"></div>
+      <button class="checkout-btn" onclick="finishCheckout()">
+        <i class="ri-check-line"></i> Finalizar
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SCRIPTS
+       Orden importa: Supabase CDN → cliente → módulos → app
+  ══════════════════════════════════════════ -->
+  <!-- 1. SDK de Supabase (crea window.supabase) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- 2. Inicialización del cliente como window.sb -->
   <script src="supabase-client.js"></script>
-  <script src="script.js"></script>
+  <!-- 3. Módulos de la app (orden: db → auth → ui → cart → app) -->
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/app.js"></script>
 
 </body>
-
 </html>

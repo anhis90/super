@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initApp() {
     updateDate();
-    
+
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
         currentUser = { email: session.user.email, role: session.user.user_metadata.role || 'cajero', id: session.user.id };
@@ -27,10 +27,10 @@ async function initApp() {
     } else {
         showLogin();
     }
-    
+
     // Theme
     if (localStorage.getItem('pos_theme') === 'dark') document.body.classList.add('dark');
-    
+
     // Input Listeners
     const codeInput = document.getElementById('product-code');
     if (codeInput) {
@@ -107,24 +107,41 @@ function showMain() {
 }
 
 async function handleLogin() {
-    const rawEmail = document.getElementById('login-user').value.trim();
+    let userInput = document.getElementById('login-user').value.trim().toLowerCase();
     const pass = document.getElementById('login-pass').value.trim();
 
-    const email = rawEmail.includes('@') ? rawEmail : `${rawEmail}@pos.com`; // Fallback for simple usernames
+    if (!userInput || !pass) {
+        alert('Completá usuario y contraseña');
+        return;
+    }
+
+    // 🔥 Convertimos usuario simple a email
+    let email = userInput.includes('@') ? userInput : `${userInput}@pos.com`;
 
     const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
+        email,
         password: pass
     });
 
     if (error) {
-        console.error("Login Error:", error);
-        alert('Error al iniciar sesión: ' + error.message + '\n\nSi creaste un usuario nuevo en Supabase, asegúrate de que el "Confirm email" esté desactivado, o que hayas confirmado el correo.');
-    } else {
-        currentUser = { email: data.user.email, role: data.user.user_metadata?.role || 'cajero', id: data.user.id };
-        await loadInitialData();
-        showMain();
+        console.error(error);
+
+        if (error.message.includes('Invalid login credentials')) {
+            alert('Usuario o contraseña incorrectos');
+        } else {
+            alert('Error: ' + error.message);
+        }
+        return;
     }
+
+    currentUser = {
+        email: data.user.email,
+        role: data.user.user_metadata?.role || 'cajero',
+        id: data.user.id
+    };
+
+    await loadInitialData();
+    showMain();
 }
 
 async function handleLogout() {
@@ -142,7 +159,7 @@ function updateUIByRole() {
 function searchProducts(query) {
     const results = document.getElementById('search-results');
     if (!query) { results.style.display = 'none'; return; }
-    
+
     const matches = products.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.code.includes(query));
     results.innerHTML = matches.map(p => `<div class="search-item" onclick="addProductToCart('${p.code}')">${p.name} - $${p.price} (Stock: ${p.stock})</div>`).join('');
     results.style.display = 'block';
@@ -152,9 +169,9 @@ function addProductToCart(code) {
     document.getElementById('search-results').style.display = 'none';
     const product = products.find(p => p.code === code);
     if (!product) { alert('Producto no encontrado'); return; }
-    
+
     if (product.stock <= 0) { alert('Sin stock disponible!'); return; }
-    
+
     const cartIdx = cart.findIndex(item => item.code === code);
     if (cartIdx > -1) {
         if (cart[cartIdx].qty + 1 > product.stock) { alert('No hay suficiente stock'); return; }
@@ -162,7 +179,7 @@ function addProductToCart(code) {
     } else {
         cart.push({ ...product, qty: 1 });
     }
-    
+
     playScanSound();
     showPreview(product);
     renderCart();
@@ -237,7 +254,7 @@ function calculateTotals(subtotal) {
     document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
     document.getElementById('iva-amount').textContent = `$${taxAmount.toFixed(2)}`;
     document.getElementById('total').textContent = `$${total.toFixed(2)}`;
-    
+
     if (discAmount > 0) {
         document.getElementById('discount-row').style.display = 'flex';
         document.getElementById('discount-percent').textContent = rule.discount;
@@ -305,7 +322,7 @@ async function confirmPayment() {
     transactions.unshift(tx);
     cart = [];
     localStorage.removeItem('pos_cart'); // Clean up old cart if any
-    
+
     await loadInitialData(); // Refresh state
     showReceipt(tx);
 }
@@ -315,7 +332,7 @@ function showReceipt(tx) {
     rec.innerHTML = `
         <h3>TICKET PRO - ${tx.code}</h3>
         <p>${tx.date}</p><hr>
-        ${tx.items.map(i => `<div>${i.name} x${i.qty} - $${(i.price*i.qty).toFixed(2)}</div>`).join('')}
+        ${tx.items.map(i => `<div>${i.name} x${i.qty} - $${(i.price * i.qty).toFixed(2)}</div>`).join('')}
         <hr>
         <div class="total-p">TOTAL: $${tx.total.toFixed(2)}</div>
         <p>IVA Incluy. (${ivaConfig}%)</p>
@@ -325,7 +342,7 @@ function showReceipt(tx) {
 }
 
 function finishCheckout() {
-    renderAll(); 
+    renderAll();
     closePopups();
 }
 
@@ -338,7 +355,7 @@ async function addNewProduct() {
 
     if (code && name && !isNaN(price)) {
         const { error } = await supabase.from('productos').insert([{
-            code, name, price, stock, 
+            code, name, price, stock,
             image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80',
             sucursal_id: currentSucursal.id
         }]);
@@ -455,25 +472,25 @@ function renderStats() {
     document.getElementById('dashboard-operaciones').textContent = todaySales.length;
     document.getElementById('dashboard-low-stock').textContent = lowStock;
     document.getElementById('dashboard-low-stock').style.color = lowStock > 0 ? 'var(--danger)' : 'var(--success)';
-    
+
     // Caja Opening & Current Cash
-    const cashSales = transactions.filter(t => t.method === 'Efectivo').reduce((s,t)=>s+t.total,0);
+    const cashSales = transactions.filter(t => t.method === 'Efectivo').reduce((s, t) => s + t.total, 0);
     const totalCash = openingCash + cashSales;
-    
+
     const cajaOpeningEl = document.getElementById('caja-monto-apertura');
     if (cajaOpeningEl) cajaOpeningEl.textContent = `$${openingCash.toFixed(2)}`;
-    
+
     const cajaTotalEl = document.getElementById('caja-monto-total');
     if (cajaTotalEl) cajaTotalEl.textContent = `$${totalCash.toFixed(2)}`;
-    
+
     // Reports
     const reportIncomeTotalEl = document.getElementById('report-income-total');
-    if (reportIncomeTotalEl) reportIncomeTotalEl.textContent = `$${transactions.reduce((s,t)=>s+t.total,0).toFixed(2)}`;
-    
+    if (reportIncomeTotalEl) reportIncomeTotalEl.textContent = `$${transactions.reduce((s, t) => s + t.total, 0).toFixed(2)}`;
+
     // Top Products
     const salesMap = {};
     transactions.forEach(t => t.items.forEach(i => salesMap[i.name] = (salesMap[i.name] || 0) + i.qty));
-    const top = Object.entries(salesMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const top = Object.entries(salesMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
     document.getElementById('top-products-list').innerHTML = top.map(p => `<li>${p[0]} <strong>(${p[1]} vend.)</strong></li>`).join('');
 }
 
@@ -487,10 +504,10 @@ function renderTransactions() {
 function populateSelects() {
     const provSelect = document.getElementById('compra-prov');
     if (provSelect) {
-        provSelect.innerHTML = '<option value="">Seleccionar Proveedor</option>' + 
+        provSelect.innerHTML = '<option value="">Seleccionar Proveedor</option>' +
             suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
     }
-    
+
     const pmSelect = document.getElementById('payment-method');
     if (pmSelect) {
         pmSelect.innerHTML = paymentRules.map(r => `<option value="${r.id}">${r.name} (${r.discount}%)</option>`).join('');

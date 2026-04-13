@@ -1,11 +1,14 @@
-// 🔗 Configuración de Supabase
+// ============================================================
+// supabase-client.js
+// Inicializa el cliente de Supabase y lo expone como window.sb
+// NO se usa Supabase Auth — solo operaciones CRUD de base de datos
+// ============================================================
+
 const SUPABASE_URL = 'https://hhhyexgsfflzzsflpsqs.supabase.co';
+
+// Clave pública (publishable key) — segura para el frontend con RLS activo
 const SUPABASE_KEY = 'sb_publishable_9ujBRAnvDfBmtrPSNY6hBg__tHkQXX6';
 
-// Asignamos el cliente inicializado directamente al objeto window
-// Esto evita el error "redeclaration of non-configurable global property supabase" 
-// al no usar const/let que colisionen con el script del CDN, pero permite usarlo globalmente.
-window.supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+// Usamos window.sb para evitar conflictos con la variable global "supabase"
+// que es inyectada automáticamente por el CDN de Supabase
+window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
