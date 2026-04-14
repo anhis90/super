@@ -28,8 +28,8 @@
         const stored = localStorage.getItem(SESSION_KEY);
         if (stored) {
             try {
-                window.currentUser = JSON.parse(stored);
-                updateUIForUser(window.currentUser);
+                currentUser = JSON.parse(stored);
+                updateUIForUser(currentUser);
                 return true;
             } catch (e) {
                 localStorage.removeItem(SESSION_KEY);
@@ -67,11 +67,11 @@
         }
 
         // Éxito: Guardar sesión
-        window.currentUser = { username: user.username, role: user.role, name: user.name };
-        localStorage.setItem(SESSION_KEY, JSON.stringify(window.currentUser));
+        currentUser = { username: user.username, role: user.role, name: user.name };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
 
         // Actualizar UI y Cargar Datos
-        updateUIForUser(window.currentUser);
+        updateUIForUser(currentUser);
         
         try {
             if (typeof loadInitialData === 'function') await loadInitialData();
@@ -87,7 +87,7 @@
      * Limpia la sesión y vuelve al login.
      */
     window.handleLogout = function() {
-        window.currentUser = null;
+        currentUser = null;
         localStorage.removeItem(SESSION_KEY);
         if (typeof showLogin === 'function') showLogin();
     };

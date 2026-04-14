@@ -6,22 +6,23 @@
 
 // ─────────────────────────────────────────────
 // ESTADO GLOBAL DE LA APLICACIÓN
-// Estas variables son compartidas por todos los módulos JS
+// Estas variables son compartidas por todos los módulos JS.
+// Usamos 'var' para asegurar que sean globales y accesibles en window.
 // ─────────────────────────────────────────────
 
-let currentUser    = null;   // Usuario logueado { username, role }
-let currentSucursal = null;  // Sucursal activa de la base de datos
+var currentUser    = null;   // Usuario logueado { username, role }
+var currentSucursal = null;  // Sucursal activa de la base de datos
 
-let products     = [];       // Lista de productos
-let suppliers    = [];       // Lista de proveedores
-let purchases    = [];       // Lista de compras
-let promos       = [];       // Promociones (Llevá X, Pagá Y)
-let transactions = [];       // Historial de ventas
-let paymentRules = [];       // Métodos de pago con descuentos
-let cart         = [];       // Items en el carrito actual
+var products     = [];       // Lista de productos
+var suppliers    = [];       // Lista de proveedores
+var purchases    = [];       // Lista de compras
+var promos       = [];       // Promociones (Llevá X, Pagá Y)
+var transactions = [];       // Historial de ventas
+var paymentRules = [];       // Métodos de pago con descuentos
+var cart         = [];       // Items en el carrito actual
 
-let ivaConfig   = 21;        // Porcentaje de IVA (se carga desde config en DB)
-let openingCash = 0;         // Monto de apertura de caja
+var ivaConfig   = 21;        // Porcentaje de IVA (se carga desde config en DB)
+var openingCash = 0;         // Monto de apertura de caja
 
 // ─────────────────────────────────────────────
 // INICIO DE LA APLICACIÓN
