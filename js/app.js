@@ -61,7 +61,18 @@ async function initApp() {
 
   if (sessionOk) {
     // Hay sesión activa — cargar datos y abrir la app
-    await loadInitialData(); // función en db.js
+    try {
+      await loadInitialData(); // función en db.js
+    } catch (e) {
+      console.warn('Error en carga inicial (Supabase):', e);
+    }
+
+    // Fallback: si no hay productos (o falló Supabase), cargar modo local
+    if ((!window.products || window.products.length === 0) && typeof loadProducts === 'function') {
+      console.log('Cargando productos desde modo local...');
+      loadProducts();
+    }
+
     if (typeof analyzeBusinessData === 'function') analyzeBusinessData();
     showMain();              // función en ui.js
   } else {

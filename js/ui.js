@@ -56,6 +56,7 @@ function toggleDarkMode() {
  * Se llama después de cualquier cambio de datos.
  */
 function renderAll() {
+  renderPOSProducts();
   renderProductTable();
   renderSuppliers();
   renderPurchases();
@@ -67,6 +68,29 @@ function renderAll() {
   renderCart();
   // Ejecutar análisis de IA después de renderizar todo
   if (typeof analyzeBusinessData === 'function') analyzeBusinessData();
+}
+
+/**
+ * renderPOSProducts()
+ * Dibuja la grilla de productos en el Punto de Venta para selección rápida.
+ */
+function renderPOSProducts() {
+  const container = document.getElementById('pos-products');
+  if (!container) return;
+
+  if (!products || products.length === 0) {
+    container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 20px;">No hay productos cargados en esta sucursal.</p>';
+    return;
+  }
+
+  container.innerHTML = products.map(p => `
+    <div class="pos-product-card" onclick="addProductToCart('${p.code}')">
+      <img src="${p.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80'}" class="pos-product-thumb" alt="${p.name}">
+      <div class="pos-product-name">${p.name}</div>
+      <div class="pos-product-price">$${parseFloat(p.price).toFixed(2)}</div>
+      <div class="pos-product-stock ${p.stock < 5 ? 'stock-low' : ''}">Stock: ${p.stock}</div>
+    </div>
+  `).join('');
 }
 
 // ─────────────────────────────────────────────

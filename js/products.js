@@ -67,10 +67,10 @@
       const tr = document.createElement('tr');
       const tdCode = document.createElement('td'); tdCode.innerText = p.code || '';
       const tdImg = document.createElement('td');
-      const img = document.createElement('img'); img.src = p.img || '';
+      const img = document.createElement('img'); img.src = p.image || '';
       img.alt = p.name || '';
       img.style.height = '40px'; img.style.width = '40px'; img.style.objectFit = 'cover'; img.style.borderRadius = '6px';
-      if (!p.img) img.style.display = 'none';
+      if (!p.image) img.style.display = 'none';
       tdImg.appendChild(img);
       const tdName = document.createElement('td'); tdName.innerText = p.name || '';
       const tdPrice = document.createElement('td'); tdPrice.innerText = (typeof p.price === 'number') ? ('$' + p.price.toFixed(2)) : p.price || '$0.00';
@@ -128,7 +128,7 @@
     const products = loadProducts();
     // Evitar duplicados por código: si existe, actualizar
     const existingIndex = products.findIndex(p => p.code === code);
-    const productObj = { code, name, price, stock, img: finalImg || '' };
+    const productObj = { code, name, price, stock, image: finalImg || '' };
     if (existingIndex >= 0) products[existingIndex] = productObj; else products.push(productObj);
 
     saveProducts(products);
@@ -211,7 +211,7 @@
   function assignPlaceholdersToAll() {
     const products = loadProducts();
     let changed = false;
-    products.forEach(p => { if (!p.img || p.img === '') { p.img = generatePlaceholderImage(p.name || p.code || 'P'); changed = true; } });
+    products.forEach(p => { if (!p.image || p.image === '') { p.image = generatePlaceholderImage(p.name || p.code || 'P'); changed = true; } });
     if (changed) { saveProducts(products); renderProductTable(); }
   }
 
@@ -219,12 +219,12 @@
   function assignProductPhotosAI() {
     const products = loadProducts();
     let changed = false;
-    products.forEach((p, i) => { if (!p.img || p.img === '') { p.img = generateProductPhoto(p.name || p.code || ('P' + i)); changed = true; } });
+    products.forEach((p, i) => { if (!p.image || p.image === '') { p.image = generateProductPhoto(p.name || p.code || ('P' + i)); changed = true; } });
     if (changed) { saveProducts(products); renderProductTable(); }
   }
 
   // Exponer utilidad de debug para inspeccionar productos y detectar truncado
-  window.debugProducts = function() { const ps = loadProducts(); console.log('Products count:', ps.length); console.log(ps.map(p=>({code:p.code,name:p.name,hasImg:!!p.img}))); return ps; };
+  window.debugProducts = function() { const ps = loadProducts(); console.log('Products count:', ps.length); console.log(ps.map(p=>({code:p.code,name:p.name,hasImg:!!p.image}))); return ps; };
   window.generateProductPhotoAI = function() {
     // Genera foto para el preview usando el nombre actual en el formulario
     const name = document.getElementById('new-prod-name')?.value || document.getElementById('new-prod-code')?.value || 'Producto';
