@@ -92,6 +92,15 @@ function updateDate() {
     if (el) el.textContent = new Date().toLocaleString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// --- Helpers ---
+function ensureSucursal() {
+    if (!currentSucursal || !currentSucursal.id) {
+        alert('No hay sucursal activa. Por favor configurá o seleccioná una sucursal antes de esta operación.');
+        return false;
+    }
+    return true;
+}
+
 // --- Auth ---
 function showLogin() {
     document.getElementById('login-screen').style.display = 'flex';
@@ -275,6 +284,7 @@ function openPaymentModal() {
 }
 
 async function confirmPayment() {
+    if (!ensureSucursal()) return;
     if (!cart.length) return;
     const tkCode = 'TK-' + Date.now().toString().slice(-6);
     const totalRaw = document.getElementById('total').textContent;
@@ -348,6 +358,7 @@ function finishCheckout() {
 
 // --- Admin Modules ---
 async function addNewProduct() {
+    if (!ensureSucursal()) return;
     const code = document.getElementById('new-prod-code').value;
     const name = document.getElementById('new-prod-name').value;
     const price = parseFloat(document.getElementById('new-prod-price').value);
@@ -372,6 +383,7 @@ async function addNewProduct() {
 }
 
 async function addSupplier() {
+    if (!ensureSucursal()) return;
     const name = document.getElementById('prov-name').value;
     const contact = document.getElementById('prov-contact').value;
     if (name) {
@@ -388,6 +400,7 @@ async function addSupplier() {
 }
 
 async function registerPurchase() {
+    if (!ensureSucursal()) return;
     const provId = document.getElementById('compra-prov').value;
     const code = document.getElementById('compra-code').value;
     const qty = parseInt(document.getElementById('compra-qty').value);
@@ -568,6 +581,7 @@ async function adjustStock(code) {
 }
 
 async function setOpeningCash() {
+    if (!ensureSucursal()) return;
     const val = parseFloat(document.getElementById('opening-cash-input-caja').value);
     if (!isNaN(val)) {
         openingCash = val;
@@ -578,6 +592,7 @@ async function setOpeningCash() {
 }
 
 async function registerCajaOp() {
+    if (!ensureSucursal()) return;
     const tipo = document.getElementById('caja-tipo').value;
     const monto = parseFloat(document.getElementById('caja-monto').value);
     const motivo = document.getElementById('caja-motivo').value;
@@ -603,12 +618,14 @@ async function registerCajaOp() {
 }
 
 async function updateIVAConfig(val) {
+    if (!ensureSucursal()) return;
     ivaConfig = parseFloat(val);
     await supabase.from('configuracion').upsert({ key: 'iva', value: val.toString(), sucursal_id: currentSucursal.id }, { onConflict: 'key,sucursal_id' });
     renderCart();
 }
 
 async function addDiscountRule() {
+    if (!ensureSucursal()) return;
     const name = document.getElementById('desc-name').value;
     const val = parseFloat(document.getElementById('desc-value').value);
     if (name && !isNaN(val)) {
@@ -635,6 +652,7 @@ async function removeDiscountRule(id) {
 }
 
 async function addPromotion() {
+    if (!ensureSucursal()) return;
     const code = document.getElementById('promo-code').value;
     const take = parseInt(document.getElementById('promo-take').value);
     const pay = parseInt(document.getElementById('promo-pay').value);
@@ -660,6 +678,7 @@ function removePromo(id) {
 }
 
 async function clearTransactions() {
+    if (!ensureSucursal()) return;
     if (confirm('¿Borrar todo el historial?')) {
         const { error } = await supabase.from('ventas').delete().eq('sucursal_id', currentSucursal.id);
         if (error) alert(error.message); else {
