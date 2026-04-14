@@ -575,6 +575,31 @@
         </div>
       </div>
 
+        <!-- ══════════════════════════════════════════
+             POPUP: CONFIGURAR SUCURSAL (cuando no existe)
+        ══════════════════════════════════════════ -->
+        <div id="popup-sucursal" class="popup" style="max-width:520px;">
+          <div class="popup-header">
+            <h2><i class="ri-store-line"></i> Configurar Sucursal</h2>
+            <button class="close-btn" onclick="closePopups()">✕</button>
+          </div>
+          <div class="popup-body">
+            <p>El sistema no encontró una sucursal activa. Podés crear una sucursal por defecto o completar los datos y guardarla.</p>
+            <div class="form-group">
+              <label>Nombre de la sucursal</label>
+              <input id="sucursal-name" class="form-input" placeholder="Sucursal Principal">
+            </div>
+            <div class="form-group">
+              <label>Dirección / Notas</label>
+              <input id="sucursal-address" class="form-input" placeholder="Dirección, Local, etc.">
+            </div>
+            <div style="display:flex; gap:10px; margin-top:12px;">
+              <button class="action-btn" onclick="createSucursalFromForm(true)">Crear sucursal por defecto</button>
+              <button class="btn-primary" onclick="createSucursalFromForm(false)">Guardar y usar</button>
+            </div>
+          </div>
+        </div>
+
       <h4 style="margin-bottom:10px;">📋 Promociones activas</h4>
       <ul id="promo-list" class="editable-list"></ul>
     </div>

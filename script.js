@@ -41,9 +41,31 @@ async function initApp() {
 }
 
 async function loadInitialData() {
-    // Sucursal
-    const { data: sucursales } = await supabase.from('sucursales').select('*').limit(1);
-    currentSucursal = sucursales[0];
+    // Sucursal: ensure there's at least one sucursal; if none, create a default one
+    try {
+        const { data: sucursales } = await supabase.from('sucursales').select('*').limit(1);
+        if (sucursales && sucursales.length) {
+            currentSucursal = sucursales[0];
+            localStorage.setItem('pos_sucursal', JSON.stringify(currentSucursal));
+        } else {
+            // create default sucursal in DB
+            const defaultSuc = { name: 'Sucursal Principal', address: 'Local', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' };
+            try {
+                const { data: ins, error: insErr } = await supabase.from('sucursales').insert([defaultSuc]).select();
+                if (!insErr && ins && ins.length) {
+                    currentSucursal = ins[0];
+                    localStorage.setItem('pos_sucursal', JSON.stringify(currentSucursal));
+                }
+            } catch (e) {
+                console.warn('No se pudo crear sucursal por defecto en DB, se usará configuración local', e);
+            }
+        }
+    } catch (e) {
+        // supabase might be unavailable; try loading from localStorage
+        console.warn('Error consultando sucursales en supabase:', e);
+        const stored = localStorage.getItem('pos_sucursal');
+        if (stored) currentSucursal = JSON.parse(stored);
+    }
 
     // Productos
     const { data: prodData } = await supabase.from('productos').select('*');
@@ -94,11 +116,62 @@ function updateDate() {
 
 // --- Helpers ---
 function ensureSucursal() {
-    if (!currentSucursal || !currentSucursal.id) {
-        alert('No hay sucursal activa. Por favor configurá o seleccioná una sucursal antes de esta operación.');
-        return false;
-    }
-    return true;
+    if (currentSucursal && currentSucursal.id) return true;
+    // try localStorage fallback
+    try {
+        const stored = localStorage.getItem('pos_sucursal');
+        if (stored) {
+            currentSucursal = JSON.parse(stored);
+            console.info('Sucursal cargada desde localStorage:', currentSucursal.name || currentSucursal.id);
+            return true;
+        }
+    } catch (e) { console.warn('Error leyendo pos_sucursal desde localStorage', e); }
+
+    // instrument missing sucursal
+    reportMissingSucursal();
+
+    // open configuration modal so the user can create or select a sucursal
+    try { openPopup('sucursal'); } catch (e) { alert('No hay sucursal activa. Por favor configurá una sucursal.'); }
+    return false;
+}
+
+function reportMissingSucursal(caller){
+    window._sucursalErrors = window._sucursalErrors || [];
+    const entry = { time: new Date().toISOString(), caller: caller||null, stack: (new Error()).stack };
+    window._sucursalErrors.push(entry);
+    console.warn('Operación bloqueada: no hay sucursal activa', entry);
+}
+
+async function createSucursalFromForm(useDefault){
+    const nameEl = document.getElementById('sucursal-name');
+    const addrEl = document.getElementById('sucursal-address');
+    const name = (nameEl && nameEl.value.trim()) || (useDefault ? 'Sucursal Principal' : '');
+    const address = (addrEl && addrEl.value.trim()) || (useDefault ? 'Local' : '');
+    if (!name) { alert('Completá el nombre de la sucursal'); return; }
+    const payload = { name, address, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' };
+    // try create in supabase, otherwise save locally
+    try {
+        if (window.supabase) {
+            const { data, error } = await supabase.from('sucursales').insert([payload]).select();
+            if (!error && data && data.length) {
+                currentSucursal = data[0];
+                localStorage.setItem('pos_sucursal', JSON.stringify(currentSucursal));
+                closePopups();
+                await loadInitialData();
+                renderAll();
+                alert('Sucursal creada y seleccionada: ' + currentSucursal.name);
+                return;
+            }
+        }
+    } catch (e) { console.warn('No se pudo crear sucursal en DB', e); }
+
+    // fallback: store locally
+    currentSucursal = Object.assign({ id: 'local-' + Date.now() }, payload);
+    localStorage.setItem('pos_sucursal', JSON.stringify(currentSucursal));
+    closePopups();
+    await loadInitialData();
+    renderAll();
+    alert('Sucursal guardada localmente: ' + currentSucursal.name);
 }
 
 // --- Auth ---
