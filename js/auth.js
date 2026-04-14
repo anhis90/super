@@ -134,17 +134,29 @@
         const userInp = document.getElementById('login-user');
         const passInp = document.getElementById('login-pass');
 
-        if (loginBtn) loginBtn.onclick = window.handleLogin;
+        if (loginBtn) {
+            loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.handleLogin();
+            });
+        }
         
-        if (userInp) userInp.oninput = updateBtnState;
+        // Escuchar tanto input como change (para autocompletado)
+        [userInp, passInp].forEach(el => {
+            if (el) {
+                el.addEventListener('input', updateBtnState);
+                el.addEventListener('change', updateBtnState);
+            }
+        });
+
         if (passInp) {
-            passInp.oninput = updateBtnState;
             passInp.onkeypress = (e) => {
                 if (e.key === 'Enter') window.handleLogin();
             };
         }
         
-        updateBtnState(); // Estado inicial
+        // Verificación inicial para capturar autocompletado al cargar
+        setTimeout(updateBtnState, 500); 
     });
 
 })();
