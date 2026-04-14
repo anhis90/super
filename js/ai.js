@@ -1,771 +1,300 @@
-/*
-  js/ai.js
-
-  Módulo sencillo de "IA" local para el POS.
-  - No usa APIs externas.
-  - Analiza datos locales (globales o localStorage o tablas DOM) y genera:
-    * alertas de stock
-    * top productos (hoy / semana)
-    * recomendaciones de compra
-    * productos sin movimiento
-
-  Cómo funciona:
-  - `analyzeBusinessData()` recorre productos y ventas y actualiza el UI.
-  - Colección de datos buscada (por orden): `window.products`, `window.transactions`,
-    `localStorage.transactions`, tablas DOM `#product-table-body`, `#transactions-table-body`.
-
-  Para adaptar reglas (por ejemplo stock mínimo, días): modificar las constantes
-  STOCK_MIN, ANALYSIS_DAYS, NO_MOVE_DAYS o actualizar los elementos del DOM:
-  - `#ai-cfg-stock` (stock mínimo)
-  - `#ai-cfg-dias` (días de análisis)
-  - `#ai-cfg-dead` (días sin movimiento)
-
-  Exposición:
-  - `window.analyzeBusinessData()` para forzar un re-análisis desde otras partes.
-  - `window.ai = { hookSaleRecorded: fn }` para llamar cuando se confirme una venta.
-
-*/
-
-(function () {
-  'use strict';
-
-  // ----- Configuraciones (fáciles de cambiar) -----
-  let STOCK_MIN = 5;         // stock mínimo por defecto
-  let ANALYSIS_DAYS = 7;     // ventana de análisis para rotación
-  let NO_MOVE_DAYS = 30;     // sin movimiento -> considerar bajar precio
-
-  // Umbrales adicionales
-  const HIGH_ROTATION_THRESHOLD = 5; // unidades vendidas en ANALYSIS_DAYS para considerar "alta rotación"
-
-  // ----- Helpers para lectura de datos -----
-  function tryParseJSON(v) {
-    try { return JSON.parse(v); } catch (e) { return null; }
-  }
-
-  // Intentar obtener productos desde distintas fuentes
-  function getProducts() {
-    if (window.products && Array.isArray(window.products)) return window.products;
-
-    // localStorage fallback
-    const ls = tryParseJSON(localStorage.getItem('products'));
-    if (Array.isArray(ls)) return ls;
-
-    // Intentar leer la tabla DOM (#product-table-body)
-    const tbody = document.getElementById('product-table-body');
-    if (tbody) {
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      const products = rows.map(tr => {
-        const tds = tr.querySelectorAll('td');
-        return {
-          code: tds[0]?.innerText?.trim() || '',
-          img: tds[1]?.querySelector('img')?.src || '',
-          name: tds[2]?.innerText?.trim() || '',
-          price: parseFloat((tds[3]?.innerText || '').replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0,
-          stock: parseInt(tds[4]?.innerText?.trim()) || 0
-        };
-      });
-      if (products.length) return products;
-    }
-
-    return [];
-  }
-
-  // Intentar obtener transacciones/ventas
-  // Espera arrays donde cada transacción puede tener {id,date,items:[{code,name,qty}], total}
-  function getTransactions() {
-    if (window.transactions && Array.isArray(window.transactions)) return window.transactions;
-    if (window.sales && Array.isArray(window.sales)) return window.sales;
-
-    const ls = tryParseJSON(localStorage.getItem('transactions')) || tryParseJSON(localStorage.getItem('sales'));
-    if (Array.isArray(ls)) return ls;
-
-    // Intento leer la tabla de transacciones (si existe)
-    const tbody = document.getElementById('transactions-table-body');
-    if (tbody) {
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      // No todas las implementaciones incluyen items; aquí se crean entradas resumidas
-      const txs = rows.map(tr => {
-        const tds = tr.querySelectorAll('td');
-        const code = tds[0]?.innerText?.trim() || '';
-        const dateText = tds[1]?.innerText?.trim() || '';
-        const date = parseISO(dateText || Date.now()).toISOString();
-        const total = parseFloat((tds[3]?.innerText || '').replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0;
-        return { id: code + '_' + date, date, total, items: [] };
-      });
-      if (txs.length) return txs;
-    }
-
-    return [];
-  }
-
-  function parseISO(d) {
-    // Robust date parser:
-    // - acepta timestamps (number), ISO strings, y fechas en formato DD/MM/YYYY[ , HH:MM:SS]
-    // - en caso de fallo devuelve `new Date()` para evitar errores de RangeError
-    if (d === null || d === undefined) return new Date();
-    if (typeof d === 'number') {
-      const nd = new Date(d);
-      if (!isNaN(nd)) return nd;
-    }
-    if (typeof d === 'string') {
-      // Try native parse first (ISO)
-      const native = new Date(d);
-      if (!isNaN(native)) return native;
-
-      // Try DD/MM/YYYY or D/M/YYYY with optional time
-      const m = d.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:[,T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-      if (m) {
-        const day = parseInt(m[1], 10);
-        const month = parseInt(m[2], 10) - 1;
-        const year = parseInt(m[3], 10);
-        const hh = parseInt(m[4] || '0', 10);
-        const mm = parseInt(m[5] || '0', 10);
-        const ss = parseInt(m[6] || '0', 10);
-        const dt = new Date(year, month, day, hh, mm, ss);
-        if (!isNaN(dt)) return dt;
-      }
-    }
-    // Fallback seguro
-    return new Date();
-  }
-
-  function daysAgo(dateStr) {
-    const d = parseISO(dateStr);
-    const ms = Date.now() - d.getTime();
-    return Math.floor(ms / (1000 * 60 * 60 * 24));
-  }
-
-  function formatCurrency(v) {
-    return isNaN(v) ? '$0.00' : '$' + v.toFixed(2);
-  }
-
-  // ----- Lógica de análisis -----
-  function computeTopProducts(transactions, days) {
-    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const counter = {}; // code -> {name, qty}
-
-    transactions.forEach(tx => {
-      const txDate = parseISO(tx.date).getTime();
-      if (txDate < cutoff) return;
-      const items = Array.isArray(tx.items) ? tx.items : [];
-      items.forEach(it => {
-        const code = it.code || it.id || it.sku || it.name;
-        if (!code) return;
-        counter[code] = counter[code] || { name: it.name || code, qty: 0 };
-        counter[code].qty += Number(it.qty || 0);
-      });
-    });
-
-    const arr = Object.keys(counter).map(k => ({ code: k, name: counter[k].name, qty: counter[k].qty }));
-    arr.sort((a, b) => b.qty - a.qty);
-    return arr;
-  }
-
-  function detectLowStock(products, txsInPeriod) {
-    // txsInPeriod: map code -> qty sold in period
-    const alerts = [];
-    products.forEach(p => {
-      const sold = txsInPeriod[p.code] || 0;
-      if ((p.stock || 0) <= STOCK_MIN) {
-        const msg = `⚠️ Reponer urgente: ${p.name} (se vende ${sold} en últimos ${ANALYSIS_DAYS}d y queda ${p.stock || 0} unidades)`;
-        alerts.push({ product: p, reason: 'low_stock', message: msg, sold });
-      }
-    });
-    return alerts;
-  }
-
-  function recommendPurchases(products, txCountMap) {
-    const recs = [];
-    products.forEach(p => {
-      const sold = txCountMap[p.code] || 0;
-      if (sold >= HIGH_ROTATION_THRESHOLD && (p.stock || 0) <= STOCK_MIN) {
-        const suggested = Math.max(Math.ceil(sold * 1.5), 5);
-        const message = `Comprar ${suggested} unidades de ${p.name} (alta rotación: ${sold} vendidas en ${ANALYSIS_DAYS} días)`;
-        recs.push({ product: p, suggested, message });
-      }
-    });
-    return recs;
-  }
-
-  function detectNoMovement(products, transactions) {
-    const lastSaleByCode = {}; // code -> lastDate
-    transactions.forEach(tx => {
-      const date = parseISO(tx.date).toISOString();
-      const items = Array.isArray(tx.items) ? tx.items : [];
-      items.forEach(it => {
-        const code = it.code || it.id || it.sku || it.name;
-        if (!code) return;
-        const prev = lastSaleByCode[code];
-        if (!prev || new Date(date) > new Date(prev)) lastSaleByCode[code] = date;
-      });
-    });
-
-    const dead = [];
-    products.forEach(p => {
-      const last = lastSaleByCode[p.code];
-      if (!last) {
-        // Nunca vendido
-        dead.push({ product: p, days: null, message: `⚠️ ${p.name} no tiene ventas registradas. Considerar promoción.` });
-      } else {
-        const d = daysAgo(last);
-        if (d >= NO_MOVE_DAYS) {
-          dead.push({ product: p, days: d, message: `⚠️ ${p.name} no se vende desde hace ${d} días. Considerar bajar precio.` });
-        }
-      }
-    });
-    return dead;
-  }
-
-  // ----- Renderizado UI -----
-  function renderInsights(insights) {
-    const container = document.getElementById('ai-insights-container');
-    if (!container) return;
-    container.innerHTML = ''; // limpiamos
-
-    // Alertas urgentes
-    if (insights.alerts.length) {
-      const ul = document.createElement('ul');
-      ul.style.paddingLeft = '18px';
-      insights.alerts.forEach(a => {
-        const li = document.createElement('li');
-        li.style.marginBottom = '8px';
-        li.innerText = a.message;
-        ul.appendChild(li);
-      });
-      const h = document.createElement('h3'); h.innerText = 'Alertas';
-      container.appendChild(h);
-      container.appendChild(ul);
-    } else {
-      const p = document.createElement('p'); p.innerText = 'No hay alertas.'; container.appendChild(p);
-    }
-
-    // Recomendaciones de compra
-    if (insights.recommendations.length) {
-      const h = document.createElement('h3'); h.innerText = 'Recomendaciones de Compra';
-      container.appendChild(h);
-      const ul = document.createElement('ul'); ul.style.paddingLeft = '18px';
-      insights.recommendations.forEach(r => {
-        const li = document.createElement('li'); li.innerText = r.message; ul.appendChild(li);
-      });
-      container.appendChild(ul);
-    }
-
-    // Productos sin movimiento
-    if (insights.deadProducts.length) {
-      const h = document.createElement('h3'); h.innerText = 'Productos sin movimiento';
-      container.appendChild(h);
-      const ul = document.createElement('ul'); ul.style.paddingLeft = '18px';
-      insights.deadProducts.forEach(d => {
-        const li = document.createElement('li'); li.innerText = d.message; ul.appendChild(li);
-      });
-      container.appendChild(ul);
-    }
-
-    // Top productos (hoy / semana)
-    const hTop = document.createElement('h3'); hTop.innerText = 'Top productos'; container.appendChild(hTop);
-    const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.gap = '16px';
-
-    const makeList = (arr, title) => {
-      const box = document.createElement('div'); box.style.flex = '1';
-      const t = document.createElement('p'); t.style.color = 'var(--text-muted)'; t.innerText = title; box.appendChild(t);
-      const ul = document.createElement('ul'); ul.style.paddingLeft = '18px';
-      arr.slice(0, 6).forEach(i => { const li = document.createElement('li'); li.innerText = `${i.name} — ${i.qty}`; ul.appendChild(li); });
-      box.appendChild(ul);
-      return box;
-    };
-
-    wrap.appendChild(makeList(insights.topToday, 'Hoy'));
-    wrap.appendChild(makeList(insights.topWeek, 'Semana'));
-    container.appendChild(wrap);
-  }
-
-  // ----- Función central expuesta -----
-  async function analyzeBusinessData() {
-    // Actualizar configuración desde UI si existe
-    const cfgStock = parseInt(document.getElementById('ai-cfg-stock')?.innerText || STOCK_MIN);
-    const cfgDias = parseInt(document.getElementById('ai-cfg-dias')?.innerText || ANALYSIS_DAYS);
-    const cfgDead = parseInt(document.getElementById('ai-cfg-dead')?.innerText || NO_MOVE_DAYS);
-    STOCK_MIN = isNaN(cfgStock) ? STOCK_MIN : cfgStock;
-    ANALYSIS_DAYS = isNaN(cfgDias) ? ANALYSIS_DAYS : cfgDias;
-    NO_MOVE_DAYS = isNaN(cfgDead) ? NO_MOVE_DAYS : cfgDead;
-
-    const products = getProducts();
-    const transactions = getTransactions();
-
-    // Map de ventas por producto en ventana ANALYSIS_DAYS
-    const cutoff = Date.now() - (ANALYSIS_DAYS * 24 * 60 * 60 * 1000);
-    const txCountMap = {}; // code -> qty
-    transactions.forEach(tx => {
-      const tdate = parseISO(tx.date).getTime();
-      if (tdate < cutoff) return;
-      const items = Array.isArray(tx.items) ? tx.items : [];
-      items.forEach(it => {
-        const code = it.code || it.id || it.sku || it.name;
-        if (!code) return;
-        txCountMap[code] = (txCountMap[code] || 0) + Number(it.qty || 0);
-      });
-    });
-
-    const topToday = computeTopProducts(transactions, 1);
-    const topWeek = computeTopProducts(transactions, 7);
-
-    const alerts = detectLowStock(products, txCountMap);
-    const recommendations = recommendPurchases(products, txCountMap);
-    const deadProducts = detectNoMovement(products, transactions);
-
-    const insights = { alerts, recommendations, deadProducts, topToday, topWeek };
-
-    // Actualizar UI
-    renderInsights(insights);
-
-    // Mini panel updates
-    const aiAlertsElem = document.getElementById('ai-mini-alerts');
-    if (aiAlertsElem) aiAlertsElem.innerText = String(alerts.length || 0);
-    const aiTopToday = document.getElementById('ai-mini-top-today');
-    if (aiTopToday) {
-      aiTopToday.innerHTML = '';
-      topToday.slice(0,5).forEach(i => { const li = document.createElement('li'); li.innerText = `${i.name} (${i.qty})`; aiTopToday.appendChild(li); });
-    }
-
-    // Dashboard main updates (si existen elementos)
-    const lowStockCountElem = document.getElementById('dashboard-low-stock');
-    if (lowStockCountElem) lowStockCountElem.innerText = String(alerts.length || 0);
-
-    const topProductsList = document.getElementById('top-products-list');
-    if (topProductsList) {
-      topProductsList.innerHTML = '';
-      topWeek.slice(0,8).forEach(p => { const li = document.createElement('li'); li.innerText = `${p.name} — ${p.qty}`; topProductsList.appendChild(li); });
-    }
-
-    return insights;
-  }
-
-  // ----- Integración / Observadores -----
-  // Exponer función global
-  window.analyzeBusinessData = analyzeBusinessData;
-
-  // Hook que otras partes del app pueden llamar después de registrar una venta
-  window.ai = window.ai || {};
-  window.ai.hookSaleRecorded = function (sale) {
-    // sale puede ser el objeto de la transacción recién creada
-    // Se recomienda que quien registra la venta haga: window.ai.hookSaleRecorded(tx);
-    // Simplemente re-analizamos (puede optimizarse si se necesita)
-    try { analyzeBusinessData(); } catch (e) { console.error('AI hook error', e); }
-  };
-
-  // Observador DOM: si cambian tablas de transacciones o productos, re-analizar
-  function observeTable(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    try {
-      const mo = new MutationObserver(() => { analyzeBusinessData(); });
-      mo.observe(el, { childList: true, subtree: true });
-    } catch (e) { /* no crítico */ }
-  }
-  document.addEventListener('DOMContentLoaded', () => {
-    // Pequeño retraso para que otros módulos terminen de inicializar
-    setTimeout(() => { analyzeBusinessData(); }, 600);
-    observeTable('transactions-table-body');
-    observeTable('product-table-body');
-  });
-
-  // También tratar de reaccionar a cambios en localStorage (si la app guarda ahí)
-  window.addEventListener('storage', (e) => {
-    if (e.key && (e.key.includes('transactions') || e.key.includes('products') || e.key.includes('sales'))) {
-      analyzeBusinessData();
-    }
-  });
-
-  // Exponer algunas constantes para que el usuario pueda modificarlas desde consola
-  window.aiConfig = {
-    setStockMin(v) { STOCK_MIN = Number(v); document.getElementById('ai-cfg-stock') && (document.getElementById('ai-cfg-stock').innerText = String(STOCK_MIN)); },
-    setAnalysisDays(v) { ANALYSIS_DAYS = Number(v); document.getElementById('ai-cfg-dias') && (document.getElementById('ai-cfg-dias').innerText = String(ANALYSIS_DAYS)); },
-    setNoMoveDays(v) { NO_MOVE_DAYS = Number(v); document.getElementById('ai-cfg-dead') && (document.getElementById('ai-cfg-dead').innerText = String(NO_MOVE_DAYS)); }
-  };
-
-})();
 // ============================================================
 // js/ai.js
-// 🧠 Módulo de Inteligencia de Negocio
+// 🧠 Módulo de Inteligencia de Negocio (IA Simple)
 //
-// Analiza productos y ventas existentes para generar:
-//   - Alertas de stock crítico
-//   - Top productos (hoy y semana)
-//   - Recomendaciones de compra
-//   - Alertas de productos sin movimiento
+// Este módulo analiza las ventas y el stock localmente para ayudar
+// a tomar decisiones comerciales sin necesidad de internet (offline-first).
 //
-// NO usa APIs externas. Funciona 100% offline.
-// Todo el análisis usa los arrays globales: products, transactions
+// FUNCIONALIDADES:
+// 1. 🔥 Alertas de Stock Crítico (Basado en ventas recientes)
+// 2. 📊 Top Productos (Hoy y Semana)
+// 3. 📦 Recomendaciones de Reposición (Compra inteligente)
+// 4. 💰 Detección de Productos sin Movimiento (Stock muerto)
 // ============================================================
-
 
 // ─────────────────────────────────────────────
 // ⚙️ CONFIGURACIÓN DE REGLAS
-// Modificá estos valores para ajustar el comportamiento:
+// Modificá estos valores para ajustar qué tan estricta es la "IA"
 // ─────────────────────────────────────────────
 const AI_CONFIG = {
-  STOCK_MINIMO:          5,   // 🔴 Stock <= este valor → alerta de stock bajo
-  DIAS_ANALISIS:         7,   // 📅 Días hacia atrás para analizar ventas recientes
-  VENTAS_ALTA_ROTACION:  3,   // 🔥 Unidades vendidas en el período = "alta rotación"
-  DIAS_SIN_MOVIMIENTO:   30,  // 🪦 Sin ventas en estos días → producto "muerto"
-  FACTOR_REPOSICION:     2,   // 📦 Multiplicador para calcular cuánto reponer
+  STOCK_MINIMO:          5,   // Alertar cuando quede este valor o menos
+  DIAS_ANALISIS:         7,   // Ventana de tiempo para rotación (7 días)
+  VENTAS_ALTA_ROTACION:  3,   // Cantidad mínima vendida para considerar "alta rotación"
+  DIAS_SIN_MOVIMIENTO:   30,  // Avisar si no se vendió nada en un mes
+  FACTOR_REPOSICION:     2.0, // Cantidad a comprar = ventas recientes * factor
 };
-
-
-// ─────────────────────────────────────────────
-// 🎯 FUNCIÓN CENTRAL: analyzeBusinessData()
-// ─────────────────────────────────────────────
 
 /**
  * analyzeBusinessData()
- * Punto de entrada del módulo de IA.
- * Coordina todos los análisis y renderiza los resultados en la UI.
- *
- * Se llama automáticamente después de:
- *   - Cargar datos iniciales (initApp)
- *   - Registrar una nueva venta (confirmPayment)
+ * Función central de IA. Recorre productos y ventas para generar 
+ * alertas, recomendaciones e insights estratégicos.
+ * Se ejecuta automáticamente al cargar la app y tras cada venta.
  */
 function analyzeBusinessData() {
-  // Si no hay datos suficientes, mostrar estado vacío y salir
-  if (!products.length && !transactions.length) {
+  console.log("🧠 IA: Ejecutando análisis de inteligencia de negocio...");
+
+  // Validación de datos: si no hay productos cargados no podemos analizar
+  if (!window.products || window.products.length === 0) {
     renderAIInsights(null);
     return;
   }
 
-  // Ejecutar todos los análisis y agrupar resultados
+  // Objeto con todos los resultados del análisis
   const insights = {
-    stockAlerts:      getStockAlerts(),
-    topProductsToday: getTopProducts(1),
-    topProductsWeek:  getTopProducts(7),
-    purchaseRecs:     getPurchaseRecommendations(),
-    deadStock:        getDeadStockAlerts(),
+    alerts:        calculateStockAlerts(),
+    topToday:      calculateTopProducts(1),
+    topWeek:       calculateTopProducts(7),
+    purchases:     calculatePurchaseRecommendations(),
+    stagnant:      calculateStagnantProducts(),
   };
 
-  // Renderizar en la UI
+  // 1. Dibujar los resultados en el popup de IA
   renderAIInsights(insights);
+  
+  // 2. Actualizar los widgets rápidos en el Dashboard
+  updateMiniDashboardIA(insights);
 
-  // Retornar por si otro módulo necesita los datos
   return insights;
 }
 
-
 // ─────────────────────────────────────────────
-// 1️⃣ ALERTAS DE STOCK BAJO
+// 1️⃣ LÓGICA DE ALERTAS DE STOCK (🔥)
+// Busca productos con stock bajo que además sean populares.
 // ─────────────────────────────────────────────
 
-/**
- * getStockAlerts()
- * Detecta productos con stock <= AI_CONFIG.STOCK_MINIMO.
- * Prioriza como "urgente" los que ADEMÁS tienen alta rotación reciente
- * (es decir, se venden mucho pero queda poco).
- *
- * Para modificar el umbral de stock: cambiá AI_CONFIG.STOCK_MINIMO
- * Para modificar el umbral de "alta rotación": cambiá AI_CONFIG.VENTAS_ALTA_ROTACION
- */
-function getStockAlerts() {
-  const alerts       = [];
-  const ventasRecientes = getSalesInLastDays(AI_CONFIG.DIAS_ANALISIS);
+function calculateStockAlerts() {
+  const alerts = [];
+  const recentSales = getSalesSinceDays(AI_CONFIG.DIAS_ANALISIS);
 
-  products.forEach(product => {
-    if (product.stock > AI_CONFIG.STOCK_MINIMO) return; // Stock OK, skip
+  window.products.forEach(p => {
+    // Solo analizamos productos con stock igual o menor al mínimo configurado
+    if (p.stock <= AI_CONFIG.STOCK_MINIMO) {
+      
+      // Contamos cuántas unidades se vendieron en los últimos días
+      const qtySold = recentSales.reduce((total, sale) => {
+        const item = sale.items.find(it => it.productCode === p.code || it.productName === p.name);
+        return total + (item ? item.qty : 0);
+      }, 0);
 
-    // Contar cuántas unidades de este producto se vendieron recientemente
-    const unidadesVendidas = ventasRecientes
-      .flatMap(t => t.items)
-      .filter(i => i.productName === product.name || i.productCode === product.code)
-      .reduce((sum, i) => sum + i.qty, 0);
-
-    // Si vendió mucho y tiene poco stock → urgente
-    const esUrgente = unidadesVendidas >= AI_CONFIG.VENTAS_ALTA_ROTACION;
-
-    alerts.push({
-      type:     esUrgente ? 'urgente' : 'warning',
-      product:  product.name,
-      stock:    product.stock,
-      vendidos: unidadesVendidas,
-      message:  esUrgente
-        ? `Reponer urgente: <strong>${product.name}</strong> — ${product.stock} en stock y vendió ${unidadesVendidas} und. esta semana`
-        : `Stock bajo: <strong>${product.name}</strong> — solo quedan ${product.stock} unidades`,
-    });
+      // Si se vende mucho, la alerta es "urgente"
+      const isUrgent = qtySold >= AI_CONFIG.VENTAS_ALTA_ROTACION;
+      
+      alerts.push({
+        type: isUrgent ? 'urgente' : 'warning',
+        message: isUrgent 
+          ? `⚠️ Reponer urgente: <strong>${p.name}</strong> (se vende mucho y queda poco stock)`
+          : `⚠️ Stock bajo: ${p.name} (quedan solo ${p.stock} unidades)`,
+        importance: isUrgent ? 2 : 1
+      });
+    }
   });
 
-  // Ordenar: urgentes primero
-  return alerts.sort((a, b) => a.type === 'urgente' ? -1 : 1);
+  // Ordenamos para que las urgentes aparezcan primero
+  return alerts.sort((a, b) => b.importance - a.importance);
 }
 
-
 // ─────────────────────────────────────────────
-// 2️⃣ TOP PRODUCTOS MÁS VENDIDOS
+// 2️⃣ LÓGICA DE TOP PRODUCTOS (📊)
+// Calcula el ranking de ventas según el rango de días.
 // ─────────────────────────────────────────────
 
-/**
- * getTopProducts(days)
- * Calcula los productos más vendidos en los últimos X días.
- * Devuelve un array ordenado de mayor a menor, máximo 5 items.
- *
- * @param {number} days - Cuántos días hacia atrás analizar (1 = hoy, 7 = semana)
- */
-function getTopProducts(days) {
-  const ventasRecientes = getSalesInLastDays(days);
-  const conteo = {}; // { "nombre producto": totalUnidades }
+function calculateTopProducts(days) {
+  const sales = getSalesSinceDays(days);
+  const countMap = {};
 
-  ventasRecientes.forEach(t => {
-    t.items.forEach(item => {
-      const key = item.productName;
-      conteo[key] = (conteo[key] || 0) + item.qty;
+  sales.forEach(sale => {
+    sale.items.forEach(item => {
+      const name = item.productName || "Producto Desconocido";
+      countMap[name] = (countMap[name] || 0) + item.qty;
     });
   });
 
-  // Convertir a array, ordenar y tomar los 5 primeros
-  return Object.entries(conteo)
+  return Object.entries(countMap)
     .map(([name, qty]) => ({ name, qty }))
     .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5);
+    .slice(0, 5); // Retornamos solo el top 5 para no saturar
 }
 
-
 // ─────────────────────────────────────────────
-// 3️⃣ RECOMENDACIONES DE COMPRA (REPOSICIÓN)
+// 3️⃣ LÓGICA DE RECOMENDACIÓN DE COMPRA (📦)
+// Sugiere qué comprar basándose en la velocidad de venta.
 // ─────────────────────────────────────────────
 
-/**
- * getPurchaseRecommendations()
- * Analiza ventas recientes y stock actual.
- * Si un producto tiene alta rotación y stock bajo → sugiere una cantidad a comprar.
- *
- * Fórmula de reposición:
- *   promedioDiario = totalVendido / diasAnalizados
- *   stockRecomendado = promedioDiario * diasAnalizados * FACTOR_REPOSICION
- *   cantidadAComprar = stockRecomendado - stockActual
- *
- * Para modificar: AI_CONFIG.FACTOR_REPOSICION (mayor = sugerir más stock)
- */
-function getPurchaseRecommendations() {
-  const recs            = [];
-  const ventasRecientes = getSalesInLastDays(AI_CONFIG.DIAS_ANALISIS);
+function calculatePurchaseRecommendations() {
+  const recommendations = [];
+  const recentSales = getSalesSinceDays(AI_CONFIG.DIAS_ANALISIS);
 
-  // Sumar ventas por nombre de producto
-  const ventasPorProducto = {};
-  ventasRecientes.forEach(t => {
-    t.items.forEach(item => {
-      ventasPorProducto[item.productName] = (ventasPorProducto[item.productName] || 0) + item.qty;
-    });
+  window.products.forEach(p => {
+    const qtySold = recentSales.reduce((total, sale) => {
+      const item = sale.items.find(it => it.productCode === p.code || it.productName === p.name);
+      return total + (item ? item.qty : 0);
+    }, 0);
+
+    // Sugerencia: Si es de alta rotación y el stock está en zona de riesgo
+    if (qtySold >= AI_CONFIG.VENTAS_ALTA_ROTACION && p.stock <= (AI_CONFIG.STOCK_MINIMO * 2)) {
+      const suggestedQty = Math.ceil(qtySold * AI_CONFIG.FACTOR_REPOSICION);
+      recommendations.push({
+        message: `📦 Comprar <strong>${suggestedQty}</strong> unidades de ${p.name} (alta rotación)`
+      });
+    }
   });
 
-  // Analizar cada producto con ventas en el período
-  Object.entries(ventasPorProducto).forEach(([nombre, totalVendido]) => {
-    // Solo recomendar si es "alta rotación"
-    if (totalVendido < AI_CONFIG.VENTAS_ALTA_ROTACION) return;
-
-    const product = products.find(p => p.name === nombre);
-    if (!product) return;
-
-    // Calcular cuánto reponer
-    const promedioDiario    = totalVendido / AI_CONFIG.DIAS_ANALISIS;
-    const stockRecomendado  = Math.ceil(promedioDiario * AI_CONFIG.DIAS_ANALISIS * AI_CONFIG.FACTOR_REPOSICION);
-    const cantidadAComprar  = Math.max(0, stockRecomendado - product.stock);
-
-    if (cantidadAComprar <= 0) return; // El stock es suficiente
-
-    recs.push({
-      product:       product.name,
-      stockActual:   product.stock,
-      cantidadSugerida: cantidadAComprar,
-      vendidos:      totalVendido,
-      message: `Comprar ~<strong>${cantidadAComprar} und.</strong> de ${product.name} (${totalVendido} vendidas en ${AI_CONFIG.DIAS_ANALISIS} días, stock actual: ${product.stock})`,
-    });
-  });
-
-  // Ordenar por mayor rotación
-  return recs.sort((a, b) => b.vendidos - a.vendidos);
+  return recommendations;
 }
 
-
 // ─────────────────────────────────────────────
-// 4️⃣ PRODUCTOS SIN MOVIMIENTO (STOCK MUERTO)
-// ─────────────────────────────────────────────
-
-/**
- * getDeadStockAlerts()
- * Detecta productos que tienen stock disponible pero NO se vendieron
- * en los últimos AI_CONFIG.DIAS_SIN_MOVIMIENTO días.
- *
- * Riesgo: capital inmovilizado. Acción recomendada: promociones o bajar precio.
- *
- * Para modificar el período: cambiá AI_CONFIG.DIAS_SIN_MOVIMIENTO
- */
-function getDeadStockAlerts() {
-  const alerts          = [];
-  const ventasRecientes = getSalesInLastDays(AI_CONFIG.DIAS_SIN_MOVIMIENTO);
-
-  // Conjunto de nombres de productos que SÍ se vendieron recientemente
-  const productosVendidos = new Set(
-    ventasRecientes.flatMap(t => t.items.map(i => i.productName))
-  );
-
-  // Detectar los que tienen stock pero no rotaron
-  products.forEach(product => {
-    if (product.stock <= 0) return; // Sin stock, no aplica
-    if (productosVendidos.has(product.name)) return; // Se vendió recientemente, OK
-
-    alerts.push({
-      product: product.name,
-      stock:   product.stock,
-      message: `<strong>${product.name}</strong> — sin ventas en ${AI_CONFIG.DIAS_SIN_MOVIMIENTO} días (stock: ${product.stock}). Considerá hacer una promoción o bajar el precio.`,
-    });
-  });
-
-  return alerts;
-}
-
-
-// ─────────────────────────────────────────────
-// 🛠️ HELPER: getSalesInLastDays()
+// 4️⃣ LÓGICA DE PRODUCTOS SIN MOVIMIENTO (💰)
+// Detecta productos que ocupan espacio pero no se venden.
 // ─────────────────────────────────────────────
 
-/**
- * getSalesInLastDays(days)
- * Filtra el array global `transactions` para obtener solo
- * las ventas de los últimos X días.
- *
- * Usa `t.dateRaw` (objeto Date guardado en db.js) para máxima precisión.
- * Si no existe, intenta parsear `t.date` como fallback.
- *
- * @param {number} days - Número de días hacia atrás a incluir
- * @returns {Array} - Transacciones dentro del período
- */
-function getSalesInLastDays(days) {
+function calculateStagnantProducts() {
+  const stagnant = [];
   const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  cutoff.setHours(0, 0, 0, 0); // Inicio del día X días atrás
+  cutoff.setDate(cutoff.getDate() - AI_CONFIG.DIAS_SIN_MOVIMIENTO);
 
-  return transactions.filter(t => {
-    // Preferir dateRaw (Date object exacto) sobre el string formateado
-    const fecha = t.dateRaw ? new Date(t.dateRaw) : new Date(t.date);
-    return !isNaN(fecha) && fecha >= cutoff;
+  window.products.forEach(p => {
+    // Si no hay stock, no es un producto "muerto"
+    if (p.stock <= 0) return;
+
+    // Buscamos la fecha de la última venta de este producto
+    const lastSale = window.transactions.find(t => {
+      const date = t.dateRaw ? new Date(t.dateRaw) : new Date(t.date);
+      return t.items.some(it => it.productCode === p.code || it.productName === p.name);
+    });
+
+    if (!lastSale) {
+      // Caso: El producto nunca se vendió
+      stagnant.push(`⚠️ El producto <strong>${p.name}</strong> no registra ventas. Considerar promoción.`);
+    } else {
+      // Caso: Se vendió, pero hace mucho tiempo
+      const saleDate = lastSale.dateRaw ? new Date(lastSale.dateRaw) : new Date(lastSale.date);
+      if (saleDate < cutoff) {
+        stagnant.push(`⚠️ El producto <strong>${p.name}</strong> no rota, considerar bajar precio.`);
+      }
+    }
   });
+
+  return stagnant.slice(0, 5);
 }
 
-
 // ─────────────────────────────────────────────
-// 🖼️ RENDERIZADO EN LA UI
+// 🛠️ HELPERS DE DATOS
 // ─────────────────────────────────────────────
 
 /**
- * renderAIInsights(insights)
- * Dibuja todos los análisis dentro del contenedor #ai-insights-container.
- * Si insights es null → muestra estado vacío.
- *
- * @param {Object|null} insights - Resultado de analyzeBusinessData()
+ * getSalesSinceDays(n) 
+ * Filtra el historial global de transacciones por una ventana de tiempo.
  */
+function getSalesSinceDays(n) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - n);
+  cutoff.setHours(0,0,0,0);
+
+  return (window.transactions || []).filter(t => {
+    const d = t.dateRaw ? new Date(t.dateRaw) : new Date(t.date);
+    return d >= cutoff;
+  });
+}
+
+// ─────────────────────────────────────────────
+// 🖼️ UI: RENDERIZADO DE RESULTADOS
+// ─────────────────────────────────────────────
+
 function renderAIInsights(insights) {
   const container = document.getElementById('ai-insights-container');
   if (!container) return;
 
-  // Sin datos aún
   if (!insights) {
-    container.innerHTML = `
-      <div class="ai-empty">
-        <div style="font-size:48px; margin-bottom:12px;">📊</div>
-        <p>Sin datos suficientes para analizar.</p>
-        <p style="color:var(--text-muted); font-size:13px; margin-top:6px;">
-          Registrá ventas para ver recomendaciones automáticas.
-        </p>
-      </div>
-    `;
+    container.innerHTML = '<div class="ai-empty">Esperando datos para el análisis...</div>';
     return;
   }
 
-  const { stockAlerts, topProductsToday, topProductsWeek, purchaseRecs, deadStock } = insights;
   let html = '';
 
-  // ── Sección: Alertas de Stock ──────────────────
-  if (stockAlerts.length > 0) {
+  // 1. Alertas Críticas
+  if (insights.alerts.length > 0) {
     html += `
       <div class="ai-section">
-        <h4 class="ai-section-title">⚠️ Alertas de Stock</h4>
+        <h4 class="ai-section-title"><i class="ri-alert-fill"></i> Inteligencia de Stock</h4>
         <ul class="ai-list">
-          ${stockAlerts.map(a => `
-            <li class="ai-item ai-item--${a.type}">
-              ${a.type === 'urgente' ? '⚡' : '⚠️'} ${a.message}
-            </li>
-          `).join('')}
+          ${insights.alerts.map(a => `<li class="ai-item ai-item--${a.type}">${a.message}</li>`).join('')}
         </ul>
-      </div>`;
+      </div>
+    `;
   }
 
-  // ── Sección: Recomendaciones de Compra ─────────
-  if (purchaseRecs.length > 0) {
+  // 2. Recomendaciones de Compra
+  if (insights.purchases.length > 0) {
     html += `
       <div class="ai-section">
-        <h4 class="ai-section-title">🛒 Recomendaciones de Compra</h4>
+        <h4 class="ai-section-title"><i class="ri-shopping-cart-fill"></i> Recomendaciones de Reposición</h4>
         <ul class="ai-list">
-          ${purchaseRecs.map(r => `
-            <li class="ai-item ai-item--rec">
-              📦 ${r.message}
-            </li>
-          `).join('')}
+          ${insights.purchases.map(r => `<li class="ai-item ai-item--rec">${r.message}</li>`).join('')}
         </ul>
-      </div>`;
+      </div>
+    `;
   }
 
-  // ── Sección: Top Productos Hoy ─────────────────
-  if (topProductsToday.length > 0) {
+  // 3. Top Productos de la Semana
+  if (insights.topWeek.length > 0) {
     html += `
       <div class="ai-section">
-        <h4 class="ai-section-title">🔥 Más vendidos hoy</h4>
-        <ol class="ai-list">
-          ${topProductsToday.map((p, i) => `
-            <li class="ai-item ai-item--ranked">
-              <span class="ai-rank">#${i + 1}</span>
+        <h4 class="ai-section-title"><i class="ri-medal-fill"></i> Más vendidos (Semana)</h4>
+        <div class="ai-list">
+          ${insights.topWeek.map((p, i) => `
+            <div class="ai-item ai-item--ranked">
+              <span class="ai-rank">#${i+1}</span>
               <span class="ai-product-name">${p.name}</span>
-              <strong class="ai-qty">${p.qty} und.</strong>
-            </li>
+              <span class="ai-qty"><strong>${p.qty}</strong> und.</span>
+            </div>
           `).join('')}
-        </ol>
-      </div>`;
+        </div>
+      </div>
+    `;
   }
 
-  // ── Sección: Top Productos Semana ──────────────
-  if (topProductsWeek.length > 0) {
+  // 4. Stock Muerto
+  if (insights.stagnant.length > 0) {
     html += `
       <div class="ai-section">
-        <h4 class="ai-section-title">📈 Más vendidos esta semana</h4>
-        <ol class="ai-list">
-          ${topProductsWeek.map((p, i) => `
-            <li class="ai-item ai-item--ranked">
-              <span class="ai-rank">#${i + 1}</span>
-              <span class="ai-product-name">${p.name}</span>
-              <strong class="ai-qty">${p.qty} und.</strong>
-            </li>
-          `).join('')}
-        </ol>
-      </div>`;
-  }
-
-  // ── Sección: Stock sin movimiento ──────────────
-  if (deadStock.length > 0) {
-    html += `
-      <div class="ai-section">
-        <h4 class="ai-section-title">🪦 Sin movimiento (${AI_CONFIG.DIAS_SIN_MOVIMIENTO} días)</h4>
+        <h4 class="ai-section-title"><i class="ri-dislike-fill"></i> Alerta de Baja Rotación</h4>
         <ul class="ai-list">
-          ${deadStock.map(d => `
-            <li class="ai-item ai-item--dead">
-              🪦 ${d.message}
-            </li>
-          `).join('')}
+          ${insights.stagnant.map(msg => `<li class="ai-item ai-item--dead">${msg}</li>`).join('')}
         </ul>
-      </div>`;
+      </div>
+    `;
   }
 
-  // Si no hay ningún insight que mostrar
-  if (!html) {
+  // Si no hay nada que reportar
+  if (html === '') {
     html = `
       <div class="ai-empty">
-        <div style="font-size:48px; margin-bottom:12px;">✅</div>
-        <p>¡Todo en orden! No hay alertas en este momento.</p>
-      </div>`;
+        <i class="ri-checkbox-circle-fill" style="font-size:40px; color:var(--success); margin-bottom:15px; display:block;"></i>
+        ✅ Todo en orden. Tu stock y ventas están balanceados por ahora.
+      </div>
+    `;
   }
 
   container.innerHTML = html;
+}
+
+/**
+ * updateMiniDashboardIA
+ * Actualiza los contadores y listas rápidas en el dashboard principal.
+ */
+function updateMiniDashboardIA(insights) {
+  // Widget de cantidad de alertas
+  const miniAlerts = document.getElementById('ai-mini-alerts');
+  if (miniAlerts) {
+    miniAlerts.textContent = insights.alerts.length;
+    miniAlerts.style.color = insights.alerts.length > 0 ? 'var(--danger)' : 'var(--success)';
+  }
+
+  // Widget de top hoy
+  const miniTopToday = document.getElementById('ai-mini-top-today');
+  if (miniTopToday) {
+    miniTopToday.innerHTML = insights.topToday.length > 0
+      ? insights.topToday.map(p => `<li>${p.name} <small>(${p.qty})</small></li>`).join('')
+      : '<li style="list-style:none; opacity:0.6;">Sin ventas</li>';
+  }
 }

@@ -801,16 +801,51 @@ body.dark .ai-item--rec {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  font-weight: 800;
 }
 
-/* Estado vacío / sin datos */
+/* Efecto de brillo para el botón de IA en el sidebar */
+.nav-links li button[onclick*="openPopup('ia')"] {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.nav-links li button[onclick*="openPopup('ia')"]::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: rotate(45deg);
+  animation: aiGlow 4s infinite linear;
+}
+
+@keyframes aiGlow {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+
+/* Contenedor de insights vacío con estética moderna */
 .ai-empty {
   text-align: center;
-  padding: 50px 20px;
+  padding: 40px 20px;
   color: var(--text-muted);
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  border: 2px dashed var(--glass-border);
 }
+
+/* Scrollbar personalizada para el popup de IA */
+#ai-insights-container::-webkit-scrollbar {
+  width: 6px;
+}
+#ai-insights-container::-webkit-scrollbar-thumb {
+  background: var(--primary-gradient);
+  border-radius: 10px;
+}
+
 
 /* Responsive Media Queries */
 @media (max-width: 1200px) {

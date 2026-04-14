@@ -62,6 +62,7 @@ async function initApp() {
   if (sessionOk) {
     // Hay sesión activa — cargar datos y abrir la app
     await loadInitialData(); // función en db.js
+    if (typeof analyzeBusinessData === 'function') analyzeBusinessData();
     showMain();              // función en ui.js
   } else {
     // Sin sesión — mostrar pantalla de login

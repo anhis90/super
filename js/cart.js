@@ -204,6 +204,7 @@ async function confirmPayment() {
   // 5. Limpiar carrito y refrescar datos
   cart = [];
   await loadInitialData();
+  if (typeof analyzeBusinessData === 'function') analyzeBusinessData();
   showReceipt(tx);
 }
 
