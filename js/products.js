@@ -142,6 +142,8 @@
   });
 
   // Exponer función global para el onclick en HTML
-  window.addNewProduct = addNewProduct;
+  // Usamos un nombre distinto (`addLocalProduct`) para evitar sobrescribir
+  // funciones existentes que insertan directamente en la base de datos
+  window.addLocalProduct = addNewProduct;
 
 })();
