@@ -152,30 +152,30 @@
   function generateProductPhoto(label, size = 400) {
     const name = (label || '').toLowerCase();
     
-    // Librería MASIVA de imágenes reales (Unsplash)
+    // Librería MASIVA de imágenes reales (LoremFlickr - Mayor compatibilidad)
     const library = [
-      { keywords: ['yerba', 'mate', 'canarias', 'taragui'], url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=400' },
-      { keywords: ['leche', 'milk', 'lacteo', 'yogur', 'queso', 'crema', 'manteca'], url: 'https://images.unsplash.com/photo-1550583724-125581828cd1?w=400' },
-      { keywords: ['coca', 'cola', 'gaseosa', 'soda', 'pepsi', 'sprite', 'fanta', 'seven', 'tonica'], url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400' },
-      { keywords: ['pan', 'factura', 'bakery', 'galletita', 'bizcocho', 'tostada', 'cereal'], url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400' },
-      { keywords: ['arroz', 'rice', 'legumbre', 'lenteja', 'poroto', 'garbanzo'], url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
-      { keywords: ['fideo', 'pasta', 'tallarin', 'ravioles', 'gnocchi', 'spaghetti'], url: 'https://images.unsplash.com/photo-1551462147-37885acc3c41?w=400' },
-      { keywords: ['carne', 'meat', 'asado', 'pollo', 'chicken', 'vaca', 'cerdo', 'panceta', 'salame'], url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400' },
-      { keywords: ['fruta', 'manzana', 'apple', 'banana', 'naranja', 'pera', 'uva', 'sandia'], url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400' },
-      { keywords: ['verdura', 'tomate', 'vegetable', 'lechuga', 'papa', 'cebolla', 'zanahoria'], url: 'https://images.unsplash.com/photo-1566385101042-1a0aa0c12e8c?w=400' },
-      { keywords: ['cerveza', 'beer', 'birra', 'heineken', 'quilmes', 'corona', 'stella'], url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400' },
-      { keywords: ['vino', 'wine', 'malbec', 'tinto', 'blanco', 'rosado'], url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400' },
-      { keywords: ['limpieza', 'detergente', 'jabon', 'lavandina', 'shampoo', 'desodorante', 'papel'], url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400' },
-      { keywords: ['snack', 'papa frita', 'lays', 'cheetos', 'doritos', 'palitos', 'mani'], url: 'https://images.unsplash.com/photo-1566478431375-704332f50ec0?w=400' },
-      { keywords: ['cafe', 'coffee', 'nespresso', 'dolca'], url: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400' },
-      { keywords: ['chocolate', 'caramelo', 'dulce', 'alfajor', 'bombon', 'milka'], url: 'https://images.unsplash.com/photo-1511381939415-e44015466834?w=400' },
-      { keywords: ['agua', 'water', 'mineral', 'kin', 'villavicencio'], url: 'https://images.unsplash.com/photo-1560023907-5f339617ea30?w=400' },
-      { keywords: ['aceite', 'oil', 'cocina', 'oliva', 'girasol'], url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400' },
-      { keywords: ['harina', 'flour', 'reposteria'], url: 'https://images.unsplash.com/photo-1520630600001-eb432f83130d?w=400' },
-      { keywords: ['azucar', 'sugar', 'dulce'], url: 'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=400' },
-      { keywords: ['sal', 'salt', 'condimento'], url: 'https://images.unsplash.com/photo-1626509135520-7f9a24729cc5?w=400' },
-      { keywords: ['huevo', 'egg'], url: 'https://images.unsplash.com/photo-1569254994521-ddaa58163b4b?w=400' },
-      { keywords: ['helado', 'ice cream', 'grido'], url: 'https://images.unsplash.com/photo-1567206563066-0560c39a3acc?w=400' }
+      { keywords: ['yerba', 'mate', 'yerba mate'], url: 'https://loremflickr.com/400/400/yerba,mate/all' },
+      { keywords: ['leche', 'milk', 'lacteo', 'yogur', 'queso', 'crema'], url: 'https://loremflickr.com/400/400/milk,cheese/all' },
+      { keywords: ['coca', 'cola', 'gaseosa', 'soda', 'pepsi', 'sprite'], url: 'https://loremflickr.com/400/400/soda,coke/all' },
+      { keywords: ['pan', 'factura', 'bakery', 'galletita', 'bizcocho'], url: 'https://loremflickr.com/400/400/bread,bakery/all' },
+      { keywords: ['arroz', 'rice', 'legumbre'], url: 'https://loremflickr.com/400/400/rice,legumes/all' },
+      { keywords: ['fideo', 'pasta', 'tallarin', 'ravioles'], url: 'https://loremflickr.com/400/400/pasta,spaghetti/all' },
+      { keywords: ['carne', 'meat', 'asado', 'pollo', 'vaca'], url: 'https://loremflickr.com/400/400/meat,beef/all' },
+      { keywords: ['fruta', 'manzana', 'apple', 'banana', 'naranja'], url: 'https://loremflickr.com/400/400/fruit,apple/all' },
+      { keywords: ['verdura', 'tomate', 'vegetable', 'lechuga', 'papa'], url: 'https://loremflickr.com/400/400/vegetables,tomato/all' },
+      { keywords: ['cerveza', 'beer', 'birra', 'heineken'], url: 'https://loremflickr.com/400/400/beer,bottle/all' },
+      { keywords: ['vino', 'wine', 'malbec'], url: 'https://loremflickr.com/400/400/wine,bottle/all' },
+      { keywords: ['limpieza', 'detergente', 'jabon', 'lavandina'], url: 'https://loremflickr.com/400/400/cleaning,soap/all' },
+      { keywords: ['snack', 'papa frita', 'lays', 'cheetos'], url: 'https://loremflickr.com/400/400/snacks,chips/all' },
+      { keywords: ['cafe', 'coffee', 'nespresso'], url: 'https://loremflickr.com/400/400/coffee,cup/all' },
+      { keywords: ['chocolate', 'caramelo', 'dulce', 'alfajor'], url: 'https://loremflickr.com/400/400/chocolate,candy/all' },
+      { keywords: ['agua', 'water', 'mineral'], url: 'https://loremflickr.com/400/400/water,bottle/all' },
+      { keywords: ['aceite', 'oil', 'cocina'], url: 'https://loremflickr.com/400/400/oil,cooking/all' },
+      { keywords: ['harina', 'flour'], url: 'https://loremflickr.com/400/400/flour,baking/all' },
+      { keywords: ['azucar', 'sugar'], url: 'https://loremflickr.com/400/400/sugar,sweet/all' },
+      { keywords: ['sal', 'salt'], url: 'https://loremflickr.com/400/400/salt,food/all' },
+      { keywords: ['huevo', 'egg'], url: 'https://loremflickr.com/400/400/eggs/all' },
+      { keywords: ['helado', 'ice cream'], url: 'https://loremflickr.com/400/400/icecream/all' }
     ];
 
     const match = library.find(item => item.keywords.some(k => name.includes(k)));
@@ -292,10 +292,10 @@
       nameInp.addEventListener('input', () => {
         clearTimeout(timeout);
         timeout = setTimeout(() => {
-          if (nameInp.value.length > 3) {
+          if (nameInp.value.length >= 3) {
             window.generateProductPhotoAI();
           }
-        }, 800);
+        }, 1200); // Aumentamos a 1.2s para ser más gentiles con la red
       });
     }
   }
