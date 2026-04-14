@@ -99,11 +99,12 @@
     const stock = parseInt(stockRaw) || 0;
 
     const imgData = await readImageAsDataURL(imgInput);
-
+    // If no image provided, generate a simple placeholder (SVG data URL)
+    const finalImg = imgData || generatePlaceholderImage(name || code);
     const products = loadProducts();
     // Evitar duplicados por código: si existe, actualizar
     const existingIndex = products.findIndex(p => p.code === code);
-    const productObj = { code, name, price, stock, img: imgData || '' };
+    const productObj = { code, name, price, stock, img: finalImg || '' };
     if (existingIndex >= 0) products[existingIndex] = productObj; else products.push(productObj);
 
     saveProducts(products);
@@ -119,6 +120,32 @@
     // Notificar a otros módulos
     if (window.analyzeBusinessData) window.analyzeBusinessData();
   }
+
+  // Genera una imagen placeholder SVG como data URL para usar cuando no hay foto
+  function generatePlaceholderImage(label, size = 160) {
+    const bgColors = ['#FFB703','#FB8500','#219EBC','#023E8A','#8ECAE6','#FF006E'];
+    const color = bgColors[Math.abs(hashCode(label)) % bgColors.length] || '#888';
+    const initials = (label || '').split(' ').slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('').slice(0,2) || 'P';
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'>`+
+      `<rect width='100%' height='100%' fill='${color}' rx='12'/>`+
+      `<text x='50%' y='55%' font-size='${Math.floor(size/2.8)}' text-anchor='middle' fill='white' font-family='Arial,Helvetica,sans-serif' font-weight='700'>${escapeXml(initials)}</text>`+
+      `</svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+
+  function escapeXml(s) { return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&apos;"}[c]; }); }
+  function hashCode(str) { let h=0; for(let i=0;i<str.length;i++){ h = ((h<<5)-h)+str.charCodeAt(i); h |= 0;} return h; }
+
+  // Asigna placeholders a todos los productos que no tengan imagen
+  function assignPlaceholdersToAll() {
+    const products = loadProducts();
+    let changed = false;
+    products.forEach(p => { if (!p.img || p.img === '') { p.img = generatePlaceholderImage(p.name || p.code || 'P'); changed = true; } });
+    if (changed) { saveProducts(products); renderProductTable(); }
+  }
+
+  // Exponer utilidad de debug para inspeccionar productos y detectar truncado
+  window.debugProducts = function() { const ps = loadProducts(); console.log('Products count:', ps.length); console.log(ps.map(p=>({code:p.code,name:p.name,hasImg:!!p.img}))); return ps; };
 
   // Preview de imagen en el formulario
   function setupImagePreview() {
