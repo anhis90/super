@@ -19,6 +19,28 @@
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
   <!-- Favicon inline: evita petición 404 a /favicon.ico en GitHub Pages -->
   <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23007acc'/><text x='50' y='58' font-size='50' text-anchor='middle' fill='white' font-family='Arial'>SP</text></svg>">
+  <style>
+    /* Login redesign styles (scoped) */
+    .login-overlay { background: linear-gradient(180deg, rgba(15,23,42,0.65), rgba(6,10,25,0.65)), radial-gradient(600px 400px at 10% 10%, rgba(58,64,151,0.12), transparent); }
+    .login-container { display:flex; width:100%; max-width:1100px; margin:40px; border-radius:18px; overflow:hidden; box-shadow: 0 10px 30px rgba(2,6,23,0.45); }
+    .login-brand { flex:1.05; background: linear-gradient(135deg,#2b2ef5,#7c3aed); color:#fff; padding:48px; display:flex; flex-direction:column; justify-content:center; gap:18px; }
+    .brand-title { font-family: 'Inter', sans-serif; font-weight:800; font-size:28px; letter-spacing:0.6px; }
+    .brand-sub { opacity:0.95; font-size:14px; color:rgba(255,255,255,0.9); }
+    .brand-points { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    .bp { background:rgba(255,255,255,0.08); padding:8px 12px; border-radius:10px; font-size:13px; }
+    .login-form { flex:0.95; background:#fff; padding:34px; display:flex; flex-direction:column; justify-content:center; gap:14px; }
+    .form-head { display:flex; align-items:center; gap:12px; }
+    .form-head h2 { margin:0; font-size:20px; }
+    .form-group { display:flex; flex-direction:column; gap:6px; }
+    .form-input { padding:12px 14px; border-radius:10px; border:1px solid #e6e9ef; font-size:15px; outline:none; transition:box-shadow .15s, border-color .15s; }
+    .form-input:focus { box-shadow: 0 6px 18px rgba(41,37,85,0.08); border-color:#7c3aed; }
+    .btn-primary { background:linear-gradient(90deg,#5b6bff,#7c3aed); color:#fff; padding:12px 16px; border-radius:10px; border:none; font-weight:700; cursor:pointer; transition:transform .06s,opacity .12s; }
+    .btn-primary:active{ transform:translateY(1px);} .btn-primary[disabled]{ opacity:0.6; cursor:not-allowed; }
+    .login-error { color:#d14343; font-weight:700; background:#fff3f3; padding:8px 12px; border-radius:8px; display:none; }
+    .password-row { display:flex; gap:8px; align-items:center; }
+    .pwd-toggle { background:transparent; border:none; cursor:pointer; font-size:18px; padding:8px; }
+    @media (max-width:900px){ .login-container{ flex-direction:column; margin:18px; } .login-brand{padding:24px} .login-form{padding:22px} }
+  </style>
 </head>
 
 <body>
@@ -27,33 +49,52 @@
        PANTALLA DE LOGIN
        Sin Supabase Auth — validación local
   ══════════════════════════════════════════ -->
-  <div id="login-screen" class="login-overlay" style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
-    <div class="login-card" style="width:100%; max-width:420px;">
-      <div class="logo" style="margin-bottom:30px; text-align:center;">
-        Super<span>POS</span> Pro
+  <div id="login-screen" class="login-overlay" style="display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px;">
+    <div class="login-container">
+      <div class="login-brand">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:56px; height:56px; border-radius:10px; background:rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px;">SP</div>
+          <div>
+            <div class="brand-title">SuperPOSPro</div>
+            <div class="brand-sub">Sistema de punto de venta para comercios y supermercados</div>
+          </div>
+        </div>
+        <div style="margin-top:12px; font-size:14px; opacity:0.95;">Accedé al sistema para gestionar ventas, caja y stock</div>
+        <div class="brand-points" aria-hidden>
+          <div class="bp">Ventas</div>
+          <div class="bp">Stock</div>
+          <div class="bp">Caja</div>
+          <div class="bp">Reportes</div>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>Usuario</label>
-        <input type="text" id="login-user" placeholder="admin o cajero" autocomplete="username">
+      <div class="login-form" role="region" aria-label="Formulario de acceso">
+        <div class="form-head">
+          <h2>Iniciar sesión</h2>
+        </div>
+
+        <div id="login-error" class="login-error" role="alert"></div>
+
+        <div class="form-group">
+          <label for="login-user">Usuario</label>
+          <input class="form-input" type="text" id="login-user" placeholder="admin o cajero" autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="login-pass">Contraseña</label>
+          <div class="password-row">
+            <input class="form-input" type="password" id="login-pass" placeholder="••••" autocomplete="current-password">
+            <button id="pwd-toggle" class="pwd-toggle" aria-label="Mostrar contraseña">👁️</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+          <button id="btn-login" class="btn-primary" disabled>Ingresar al sistema</button>
+          <div id="loading-spinner" style="display:none;">⏳</div>
+        </div>
+
+        <p style="margin-top:12px; color:#6b7280; font-size:13px;">Usuario demo: <strong>admin</strong> / <strong>cajero</strong>  ·  Contraseña: <strong>1234</strong></p>
       </div>
-
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" id="login-pass" placeholder="••••" autocomplete="current-password"
-          onkeypress="if(event.key==='Enter') handleLogin()">
-      </div>
-
-      <!-- Mensaje de error de login -->
-      <div id="login-error" style="display:none; color:var(--danger); font-weight:700; margin-bottom:15px; text-align:center;"></div>
-
-      <button class="checkout-btn" onclick="handleLogin()" id="btn-login">
-        <i class="ri-login-box-line"></i> Ingresar
-      </button>
-
-      <p style="text-align:center; margin-top:20px; color:var(--text-muted); font-size:13px;">
-        Usuario: <strong>admin</strong> o <strong>cajero</strong> / Contraseña: <strong>1234</strong>
-      </p>
     </div>
   </div>
 

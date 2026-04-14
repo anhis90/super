@@ -1,3 +1,105 @@
+/* js/auth.js
+   Nuevo módulo de autenticación local para SuperPOSPro
+   - Maneja UI del login (habilitar botón, mostrar errores, loading)
+   - Valida credenciales locales demo: admin/1234 y cajero/1234
+   - Persiste sesión en localStorage (clave: 'sessionUser') solo si login válido
+   - Evita dobles envíos y deshabilita botón mientras valida
+*/
+
+(function(){
+  'use strict';
+
+  const VALID_USERS = { admin: '1234', cajero: '1234' };
+  const KEY_SESSION = 'sessionUser';
+  let isAuthenticating = false;
+
+  function $(id){ return document.getElementById(id); }
+
+  function showError(msg){
+    const el = $('login-error'); if(!el) return;
+    el.innerText = msg; el.style.display = 'block';
+  }
+  function clearError(){ const el = $('login-error'); if(!el) return; el.innerText=''; el.style.display='none'; }
+
+  function setLoading(on){
+    const btn = $('btn-login'); const spinner = $('loading-spinner');
+    if(on){ isAuthenticating = true; btn.setAttribute('disabled',''); spinner.style.display='inline-block'; }
+    else { isAuthenticating = false; btn.removeAttribute('disabled'); spinner.style.display='none'; }
+  }
+
+  function finishLogin(username){
+    try{ localStorage.setItem(KEY_SESSION, username); }catch(e){}
+    // mostrar app principal
+    const main = $('main-app') || $('main-app') || document.getElementById('main-app');
+    if(main) main.style.display = 'block';
+    const loginScreen = $('login-screen'); if(loginScreen) loginScreen.style.display = 'none';
+    // badge
+    const badge = $('user-role-badge'); if(badge) badge.innerText = (username === 'admin') ? 'Admin' : 'Cajero';
+  }
+
+  // Lógica principal de login
+  async function handleLogin(ev){
+    if(isAuthenticating) return;
+    clearError();
+    const user = ($('login-user')?.value || '').trim();
+    const pass = ($('login-pass')?.value || '').trim();
+    if(!user){ showError('El usuario no puede estar vacío'); $('login-user')?.focus(); return; }
+    if(!pass){ showError('La contraseña no puede estar vacía'); $('login-pass')?.focus(); return; }
+    setLoading(true);
+    try{
+      // Simular llamada asíncrona mínima para UX
+      await new Promise(r => setTimeout(r, 300));
+      const valid = Object.prototype.hasOwnProperty.call(VALID_USERS, user) && VALID_USERS[user] === pass;
+      if(!valid){ showError('Usuario o contraseña incorrectos'); setLoading(false); return; }
+      // Login exitoso
+      finishLogin(user);
+    }catch(e){ console.error('Auth error', e); showError('Error al validar credenciales'); }
+    setLoading(false);
+  }
+
+  function handleLogout(){
+    try{ localStorage.removeItem(KEY_SESSION); }catch(e){}
+    // mostrar login
+    const main = document.getElementById('main-app'); if(main) main.style.display = 'none';
+    const loginScreen = document.getElementById('login-screen'); if(loginScreen) loginScreen.style.display = 'flex';
+    // limpiar campos
+    $('login-pass') && ($('login-pass').value = '');
+    clearError();
+    setTimeout(()=>{ $('login-user') && $('login-user').focus(); }, 60);
+  }
+
+  function togglePassword(){
+    const inp = $('login-pass'); if(!inp) return; inp.type = (inp.type === 'password') ? 'text' : 'password';
+    const btn = $('pwd-toggle'); if(btn) btn.innerText = (inp.type === 'password') ? '👁️' : '🙈';
+  }
+
+  function updateBtnState(){
+    const btn = $('btn-login'); if(!btn) return;
+    const user = ($('login-user')?.value || '').trim(); const pass = ($('login-pass')?.value || '').trim();
+    if(user && pass && !isAuthenticating) btn.removeAttribute('disabled'); else btn.setAttribute('disabled','');
+  }
+
+  function initAuth(){
+    document.addEventListener('keydown', e=>{ if(e.key==='Enter'){ const active = document.activeElement; if(active && (active.id==='login-user' || active.id==='login-pass')){ handleLogin(); } } });
+    $('btn-login')?.addEventListener('click', handleLogin);
+    $('pwd-toggle')?.addEventListener('click', togglePassword);
+    ['login-user','login-pass'].forEach(id=>{ const el = $(id); if(el) el.addEventListener('input', updateBtnState); });
+    // focus inicial
+    setTimeout(()=>{ $('login-user') && $('login-user').focus(); updateBtnState(); }, 80);
+
+    // Auto-login mínimo si session válida en localStorage
+    const sess = localStorage.getItem(KEY_SESSION);
+    if(sess && Object.prototype.hasOwnProperty.call(VALID_USERS, sess)){
+      // No hacemos bypass: si existe sesión almacenada y usuario aún válido, restaurar
+      finishLogin(sess);
+    }
+    // Exponer funciones globales (compatibilidad con botones inline)
+    window.handleLogin = handleLogin; window.handleLogout = handleLogout; window.auth = { isAuthenticated: ()=> !!localStorage.getItem(KEY_SESSION) };
+  }
+
+  document.addEventListener('DOMContentLoaded', initAuth);
+
+})();
 // ============================================================
 // js/auth.js
 // Sistema de login LOCAL — sin Supabase Auth, sin email
