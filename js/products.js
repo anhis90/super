@@ -30,6 +30,29 @@
     return window.products;
   }
 
+  // Devuelve el siguiente código disponible en formato 'NNN' (3 dígitos, con ceros a la izquierda)
+  function getNextProductCode() {
+    const products = loadProducts();
+    if (!Array.isArray(products) || products.length === 0) return '001';
+    let max = 0;
+    products.forEach(p => {
+      const raw = (p.code || '').toString().trim();
+      // extraer números dentro del código (por si hay prefijos)
+      const digits = raw.replace(/[^0-9]/g, '');
+      const n = parseInt(digits || '0', 10);
+      if (!isNaN(n) && n > max) max = n;
+    });
+    const next = max + 1;
+    return String(next).padStart(3, '0');
+  }
+
+  // Poner el siguiente código en el input (si existe)
+  function setNextCodeToInput() {
+    const inp = document.getElementById('new-prod-code');
+    if (!inp) return;
+    try { inp.value = getNextProductCode(); } catch (e) { inp.value = '001'; }
+  }
+
   function saveProducts(arr) {
     window.products = arr;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) { console.warn('No se pudo guardar products en localStorage', e); }
@@ -84,27 +107,15 @@
 
   // Función expuesta en el HTML
   async function addNewProduct() {
+    // leer el código del input (ahora se autocompleta y es readonly)
     const code = document.getElementById('new-prod-code')?.value?.trim();
     const name = document.getElementById('new-prod-name')?.value?.trim();
     const priceRaw = document.getElementById('new-prod-price')?.value;
     const stockRaw = document.getElementById('new-prod-stock')?.value;
     const imgInput = document.getElementById('new-prod-img');
 
-    // Si no se proporciona código, asignar automáticamente el siguiente código numérico (ej: 004)
-    let finalCode = code;
-    if (!finalCode) {
-      const products = loadProducts();
-      // buscar máximo código numérico existente
-      let max = 0;
-      products.forEach(p => {
-        const n = parseInt((p.code || '').replace(/[^0-9]/g, ''), 10);
-        if (!isNaN(n) && n > max) max = n;
-      });
-      const next = max + 1;
-      finalCode = String(next).padStart(3, '0');
-      // reflejar en el input para visibilidad
-      const codeInp = document.getElementById('new-prod-code'); if (codeInp) codeInp.value = finalCode;
-    }
+    // Código ya ha sido autocompletado en el input; validamos y si por alguna razón está vacío, generamos uno
+    let finalCode = code || getNextProductCode();
     if (!finalCode || !name) { alert('Nombre es obligatorio'); return; }
 
     const price = parseFloat(priceRaw) || 0;
@@ -122,13 +133,16 @@
 
     saveProducts(products);
     renderProductTable();
-    // Limpiar formulario
-    document.getElementById('new-prod-code').value = '';
+    // Limpiar formulario excepto el código: preparar el siguiente código automáticamente
     document.getElementById('new-prod-name').value = '';
     document.getElementById('new-prod-price').value = '';
     document.getElementById('new-prod-stock').value = '';
+    document.getElementById('new-prod-code').value = getNextProductCode();
+    document.getElementById('new-prod-name').value = '';
+    // limpiar imagen subida y preview
     if (imgInput) { imgInput.value = ''; }
     const preview = document.getElementById('new-prod-img-preview'); if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    window._generatedProductImage = null;
 
     // Notificar a otros módulos
     if (window.analyzeBusinessData) window.analyzeBusinessData();
@@ -242,6 +256,8 @@
     loadProducts();
     renderProductTable();
     setupImagePreview();
+    // Poner el próximo código disponible en el input al iniciar
+    setNextCodeToInput();
   });
 
   // Exponer función global para el onclick en HTML
