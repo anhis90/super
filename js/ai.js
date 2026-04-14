@@ -88,7 +88,7 @@
         const tds = tr.querySelectorAll('td');
         const code = tds[0]?.innerText?.trim() || '';
         const dateText = tds[1]?.innerText?.trim() || '';
-        const date = new Date(dateText || Date.now()).toISOString();
+        const date = parseISO(dateText || Date.now()).toISOString();
         const total = parseFloat((tds[3]?.innerText || '').replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0;
         return { id: code + '_' + date, date, total, items: [] };
       });
@@ -99,8 +99,34 @@
   }
 
   function parseISO(d) {
-    const dd = new Date(d);
-    return isNaN(dd) ? new Date() : dd;
+    // Robust date parser:
+    // - acepta timestamps (number), ISO strings, y fechas en formato DD/MM/YYYY[ , HH:MM:SS]
+    // - en caso de fallo devuelve `new Date()` para evitar errores de RangeError
+    if (d === null || d === undefined) return new Date();
+    if (typeof d === 'number') {
+      const nd = new Date(d);
+      if (!isNaN(nd)) return nd;
+    }
+    if (typeof d === 'string') {
+      // Try native parse first (ISO)
+      const native = new Date(d);
+      if (!isNaN(native)) return native;
+
+      // Try DD/MM/YYYY or D/M/YYYY with optional time
+      const m = d.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:[,T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+      if (m) {
+        const day = parseInt(m[1], 10);
+        const month = parseInt(m[2], 10) - 1;
+        const year = parseInt(m[3], 10);
+        const hh = parseInt(m[4] || '0', 10);
+        const mm = parseInt(m[5] || '0', 10);
+        const ss = parseInt(m[6] || '0', 10);
+        const dt = new Date(year, month, day, hh, mm, ss);
+        if (!isNaN(dt)) return dt;
+      }
+    }
+    // Fallback seguro
+    return new Date();
   }
 
   function daysAgo(dateStr) {
