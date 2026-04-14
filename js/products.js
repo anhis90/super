@@ -152,32 +152,46 @@
   function generateProductPhoto(label, size = 400) {
     const name = (label || '').toLowerCase();
     
-    // Mapeo inteligente de palabras clave a imágenes reales de alta calidad (Unsplash)
+    // Librería MASIVA de imágenes reales (Unsplash)
     const library = [
-      { keywords: ['yerba'], url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=400' },
-      { keywords: ['leche', 'milk', 'lacteo'], url: 'https://images.unsplash.com/photo-1550583724-125581828cd1?w=400' },
-      { keywords: ['coca', 'cola', 'gaseosa', 'soda'], url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400' },
-      { keywords: ['pan', 'factura', 'bakery'], url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400' },
-      { keywords: ['arroz', 'rice'], url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
-      { keywords: ['fideo', 'pasta'], url: 'https://images.unsplash.com/photo-1551462147-37885acc3c41?w=400' },
-      { keywords: ['carne', 'meat', 'asado'], url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400' },
-      { keywords: ['fruta', 'manzana', 'apple', 'banana'], url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400' },
-      { keywords: ['verdura', 'tomate', 'vegetable'], url: 'https://images.unsplash.com/photo-1566385101042-1a0aa0c12e8c?w=400' },
-      { keywords: ['cerveza', 'beer', 'birra'], url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400' },
-      { keywords: ['vino', 'wine'], url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400' },
-      { keywords: ['limpieza', 'detergente', 'jabon'], url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400' }
+      { keywords: ['yerba', 'mate', 'canarias', 'taragui'], url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=400' },
+      { keywords: ['leche', 'milk', 'lacteo', 'yogur', 'queso', 'crema', 'manteca'], url: 'https://images.unsplash.com/photo-1550583724-125581828cd1?w=400' },
+      { keywords: ['coca', 'cola', 'gaseosa', 'soda', 'pepsi', 'sprite', 'fanta', 'seven', 'tonica'], url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400' },
+      { keywords: ['pan', 'factura', 'bakery', 'galletita', 'bizcocho', 'tostada', 'cereal'], url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400' },
+      { keywords: ['arroz', 'rice', 'legumbre', 'lenteja', 'poroto', 'garbanzo'], url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
+      { keywords: ['fideo', 'pasta', 'tallarin', 'ravioles', 'gnocchi', 'spaghetti'], url: 'https://images.unsplash.com/photo-1551462147-37885acc3c41?w=400' },
+      { keywords: ['carne', 'meat', 'asado', 'pollo', 'chicken', 'vaca', 'cerdo', 'panceta', 'salame'], url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400' },
+      { keywords: ['fruta', 'manzana', 'apple', 'banana', 'naranja', 'pera', 'uva', 'sandia'], url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400' },
+      { keywords: ['verdura', 'tomate', 'vegetable', 'lechuga', 'papa', 'cebolla', 'zanahoria'], url: 'https://images.unsplash.com/photo-1566385101042-1a0aa0c12e8c?w=400' },
+      { keywords: ['cerveza', 'beer', 'birra', 'heineken', 'quilmes', 'corona', 'stella'], url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400' },
+      { keywords: ['vino', 'wine', 'malbec', 'tinto', 'blanco', 'rosado'], url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400' },
+      { keywords: ['limpieza', 'detergente', 'jabon', 'lavandina', 'shampoo', 'desodorante', 'papel'], url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400' },
+      { keywords: ['snack', 'papa frita', 'lays', 'cheetos', 'doritos', 'palitos', 'mani'], url: 'https://images.unsplash.com/photo-1566478431375-704332f50ec0?w=400' },
+      { keywords: ['cafe', 'coffee', 'nespresso', 'dolca'], url: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400' },
+      { keywords: ['chocolate', 'caramelo', 'dulce', 'alfajor', 'bombon', 'milka'], url: 'https://images.unsplash.com/photo-1511381939415-e44015466834?w=400' },
+      { keywords: ['agua', 'water', 'mineral', 'kin', 'villavicencio'], url: 'https://images.unsplash.com/photo-1560023907-5f339617ea30?w=400' },
+      { keywords: ['aceite', 'oil', 'cocina', 'oliva', 'girasol'], url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400' },
+      { keywords: ['harina', 'flour', 'reposteria'], url: 'https://images.unsplash.com/photo-1520630600001-eb432f83130d?w=400' },
+      { keywords: ['azucar', 'sugar', 'dulce'], url: 'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=400' },
+      { keywords: ['sal', 'salt', 'condimento'], url: 'https://images.unsplash.com/photo-1626509135520-7f9a24729cc5?w=400' },
+      { keywords: ['huevo', 'egg'], url: 'https://images.unsplash.com/photo-1569254994521-ddaa58163b4b?w=400' },
+      { keywords: ['helado', 'ice cream', 'grido'], url: 'https://images.unsplash.com/photo-1567206563066-0560c39a3acc?w=400' }
     ];
 
     const match = library.find(item => item.keywords.some(k => name.includes(k)));
     if (match) return match.url;
 
-    // Si no hay match, generamos uno dinámico desde Unsplash (requiere internet)
-    // Pero para modo offline, usamos el Canvas como fallback de seguridad
-    if (navigator.onLine) {
-      return `https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80&sig=${Math.random()}`;
+    // Búsqueda inteligente por categorías generales
+    if (name.includes('almacen') || name.includes('comida')) return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+    if (name.includes('bebida') || name.includes('tomar')) return 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?w=400';
+    if (name.includes('higiene') || name.includes('baño') || name.includes('cuid')) return 'https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=400';
+
+    // Fallback dinámico con palabras clave si no hay match exacto
+    if (navigator.onLine && name.length > 2) {
+      return `https://loremflickr.com/400/400/grocery,${encodeURIComponent(name)}/all`;
     }
 
-    // Fallback Canvas (Lo que ya existía pero con mejores colores)
+    // Fallback absoluto: Canvas estético
     return generateCanvasPlaceholder(label, size);
   }
 
@@ -254,18 +268,36 @@
     return data;
   };
 
-  // Preview de imagen en el formulario
+  // Preview de imagen en el formulario con actualización en tiempo real
   function setupImagePreview() {
     const inp = document.getElementById('new-prod-img');
+    const nameInp = document.getElementById('new-prod-name');
     const preview = document.getElementById('new-prod-img-preview');
-    if (!inp || !preview) return;
-    inp.addEventListener('change', () => {
-      const file = inp.files?.[0];
-      if (!file) { preview.style.display = 'none'; preview.src = ''; return; }
-      const reader = new FileReader();
-      reader.onload = () => { preview.src = reader.result; preview.style.display = 'inline-block'; };
-      reader.readAsDataURL(file);
-    });
+    if (!preview) return;
+
+    // Actualizar preview al subir archivo
+    if (inp) {
+      inp.addEventListener('change', () => {
+        const file = inp.files?.[0];
+        if (!file) { preview.style.display = 'none'; preview.src = ''; return; }
+        const reader = new FileReader();
+        reader.onload = () => { preview.src = reader.result; preview.style.display = 'inline-block'; };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Actualizar preview IA en tiempo real mientras escribe el nombre
+    if (nameInp) {
+      let timeout = null;
+      nameInp.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          if (nameInp.value.length > 3) {
+            window.generateProductPhotoAI();
+          }
+        }, 800);
+      });
+    }
   }
 
   // Inicialización
