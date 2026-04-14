@@ -111,7 +111,7 @@
         <li><button onclick="openPopup('inicio')">
           <i class="ri-dashboard-3-line"></i> Dashboard
         </button></li>
-        <li><button onclick="openPopup('lista')">
+        <li><button data-submenu="Lista:lista|Categorías:categorias|Importar:lista" onclick="openPopup('lista')">
           <i class="ri-list-check"></i> Productos
         </button></li>
         <li><button onclick="openPopup('proveedores')">
@@ -126,13 +126,13 @@
         <li><button onclick="openPopup('caja')">
           <i class="ri-wallet-3-line"></i> Caja
         </button></li>
-        <li><button onclick="openPopup('reportes')">
+        <li><button data-submenu="Ventas:reportes|Top Productos:reportes|Stock:reportes" onclick="openPopup('reportes')">
           <i class="ri-bar-chart-box-line"></i> Reportes
         </button></li>
         <li><button onclick="openPopup('descuentos')">
           <i class="ri-percent-line"></i> Descuentos
         </button></li>
-        <li><button onclick="openPopup('promociones')">
+        <li><button data-submenu="Promociones:promociones|Ofertas:promociones|Descuentos:descuentos" onclick="openPopup('promociones')">
           <i class="ri-megaphone-line"></i> Promociones
         </button></li>
         <li><button onclick="openPopup('ia')" style="color:var(--primary); font-weight:900;">
@@ -663,6 +663,7 @@
   <script src="js/transactions.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/nav.js"></script>
 
   <!-- Small integration helpers: bind logout and date display if available -->
   <script>
