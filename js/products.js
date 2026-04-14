@@ -90,17 +90,30 @@
     const stockRaw = document.getElementById('new-prod-stock')?.value;
     const imgInput = document.getElementById('new-prod-img');
 
-    if (!code || !name) {
-      alert('Código y nombre son obligatorios');
-      return;
+    // Si no se proporciona código, asignar automáticamente el siguiente código numérico (ej: 004)
+    let finalCode = code;
+    if (!finalCode) {
+      const products = loadProducts();
+      // buscar máximo código numérico existente
+      let max = 0;
+      products.forEach(p => {
+        const n = parseInt((p.code || '').replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(n) && n > max) max = n;
+      });
+      const next = max + 1;
+      finalCode = String(next).padStart(3, '0');
+      // reflejar en el input para visibilidad
+      const codeInp = document.getElementById('new-prod-code'); if (codeInp) codeInp.value = finalCode;
     }
+    if (!finalCode || !name) { alert('Nombre es obligatorio'); return; }
 
     const price = parseFloat(priceRaw) || 0;
     const stock = parseInt(stockRaw) || 0;
 
     const imgData = await readImageAsDataURL(imgInput);
-    // If no image provided, generate a simple placeholder (SVG data URL)
-    const finalImg = imgData || generatePlaceholderImage(name || code);
+    // If no image provided, generate a product photo-like image via canvas (offline IA)
+    // preferir imagen subida, luego imagen generada por el botón, luego auto-foto
+    const finalImg = imgData || window._generatedProductImage || generateProductPhoto(name || finalCode);
     const products = loadProducts();
     // Evitar duplicados por código: si existe, actualizar
     const existingIndex = products.findIndex(p => p.code === code);
@@ -119,6 +132,50 @@
 
     // Notificar a otros módulos
     if (window.analyzeBusinessData) window.analyzeBusinessData();
+  }
+
+  // Genera una imagen tipo 'foto' de producto usando canvas (sin APIs externas)
+  function generateProductPhoto(label, size = 400) {
+    // canvas in-memory
+    const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    // fondo gradiente
+    const seed = Math.abs(hashCode(label || 'p'));
+    const colorA = pickColor(seed);
+    const colorB = pickColor(seed + 7);
+    const grad = ctx.createLinearGradient(0, 0, size, size);
+    grad.addColorStop(0, colorA); grad.addColorStop(1, colorB);
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
+    // Sombra y 'producto' central: rect con borde circular
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    roundRect(ctx, size*0.08, size*0.12, size*0.84, size*0.6, 18, true, false);
+    // dibujo de un 'envase' simple
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    const w = size*0.5, h = size*0.38; const x = (size-w)/2, y = size*0.2;
+    roundRect(ctx, x, y, w, h, 14, true, false);
+    // etiqueta
+    ctx.fillStyle = colorB; roundRect(ctx, x + w*0.1, y + h*0.25, w*0.8, h*0.25, 8, true, false);
+    // texto de nombre (abreviado)
+    ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.floor(size/16) + 'px Arial'; ctx.textAlign = 'center';
+    const short = (label || '').split(' ').slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('') || 'P';
+    ctx.fillText(short, size/2, y + h*0.38);
+    // ruido sutil
+    addNoise(ctx, size, 0.03 * (1 + (seed % 5)));
+    return canvas.toDataURL('image/jpeg', 0.85);
+  }
+
+  function pickColor(n) {
+    const palette = ['#FFB703','#FB8500','#219EBC','#023E8A','#8ECAE6','#FF006E','#606C38','#2A6F97'];
+    return palette[n % palette.length];
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    if (r === undefined) r = 5; ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); if (fill) ctx.fill(); if (stroke) ctx.stroke(); }
+
+  function addNoise(ctx, size, intensity) {
+    const img = ctx.getImageData(0,0,size,size); const d = img.data; const amt = Math.floor(intensity*255);
+    for (let i=0;i<d.length;i+=4){ const v = (Math.random()*2-1)*amt; d[i]+=v; d[i+1]+=v; d[i+2]+=v; }
+    ctx.putImageData(img,0,0);
   }
 
   // Genera una imagen placeholder SVG como data URL para usar cuando no hay foto
@@ -144,8 +201,27 @@
     if (changed) { saveProducts(products); renderProductTable(); }
   }
 
+  // Genera y asigna fotos IA a todos los productos que no tengan imagen
+  function assignProductPhotosAI() {
+    const products = loadProducts();
+    let changed = false;
+    products.forEach((p, i) => { if (!p.img || p.img === '') { p.img = generateProductPhoto(p.name || p.code || ('P' + i)); changed = true; } });
+    if (changed) { saveProducts(products); renderProductTable(); }
+  }
+
   // Exponer utilidad de debug para inspeccionar productos y detectar truncado
   window.debugProducts = function() { const ps = loadProducts(); console.log('Products count:', ps.length); console.log(ps.map(p=>({code:p.code,name:p.name,hasImg:!!p.img}))); return ps; };
+  window.generateProductPhotoAI = function() {
+    // Genera foto para el preview usando el nombre actual en el formulario
+    const name = document.getElementById('new-prod-name')?.value || document.getElementById('new-prod-code')?.value || 'Producto';
+    const data = generateProductPhoto(name, 400);
+    const preview = document.getElementById('new-prod-img-preview');
+    if (preview) { preview.src = data; preview.style.display = 'inline-block'; }
+    // también colocar en input file no es posible, pero la imagen será usada al guardar
+    // guardamos temporalmente en window._generatedProductImage
+    window._generatedProductImage = data;
+    return data;
+  };
 
   // Preview de imagen en el formulario
   function setupImagePreview() {
