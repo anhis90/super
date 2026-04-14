@@ -107,14 +107,18 @@ function renderCart() {
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
-      <div class="item-info">
-        <span class="item-name">${item.name}</span>
-        <span class="item-price">$${parseFloat(item.price).toFixed(2)} × ${item.qty}</span>
+      <div style="display:flex; align-items:center; gap:12px; flex:1;">
+        <img src="${item.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=80&q=80'}" 
+             style="width:50px; height:50px; border-radius:8px; object-fit:cover; border:1px solid var(--glass-border);">
+        <div class="item-info">
+          <span class="item-name" style="display:block; font-size:15px;">${item.name}</span>
+          <span class="item-price" style="color:var(--primary); font-weight:600;">$${parseFloat(item.price).toFixed(2)}</span>
+        </div>
       </div>
-      <div class="item-actions">
-        <button onclick="changeQty(${idx}, 1)">+</button>
-        <span class="qty">${item.qty}</span>
-        <button onclick="changeQty(${idx}, -1)">−</button>
+      <div class="item-actions" style="display:flex; align-items:center; gap:8px;">
+        <button class="qty-btn" onclick="changeQty(${idx}, -1)" style="width:28px; height:28px; border-radius:50%; background:var(--glass-white); border:1px solid var(--glass-border); cursor:pointer;">-</button>
+        <span class="qty" style="font-weight:700; min-width:20px; text-align:center;">${item.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${idx}, 1)" style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; border:none; cursor:pointer;">+</button>
       </div>
     `;
     container.appendChild(div);
@@ -364,19 +368,44 @@ async function clearTransactions() {
 
 function showReceipt(tx) {
   const rec = document.getElementById('receipt-summary');
+  if (!rec) return;
+
+  const dateStr = tx.date;
+  const itemsHtml = tx.items.map(i => `
+    <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:14px;">
+      <span>${i.name || i.productName} (x${i.qty})</span>
+      <span>$${(i.price * i.qty).toFixed(2)}</span>
+    </div>
+  `).join('');
+
   rec.innerHTML = `
-    <h3>TICKET PRO — ${tx.code}</h3>
-    <p>${tx.date}</p><hr>
-    ${tx.items.map(i =>
-      // productName es el campo nuevo; usamos 'name' como fallback para el carrito local
-      `<div>${i.productName || i.name} ×${i.qty} — $${(i.price * i.qty).toFixed(2)}</div>`
-    ).join('')}
-    <hr>
-    <div class="total-p">TOTAL: $${tx.total.toFixed(2)}</div>
-    <p>IVA incluido (${ivaConfig}%)</p>
+    <div style="text-align:center; margin-bottom:20px;">
+      <h2 style="margin:0; color:var(--primary);">Super POS Pro</h2>
+      <p style="margin:5px 0; font-size:12px; color:var(--text-muted);">Comprobante de Pago</p>
+    </div>
+    
+    <div style="border-top:1px dashed var(--glass-border); border-bottom:1px dashed var(--glass-border); padding:15px 0; margin-bottom:15px;">
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+        <span>Ticket: <strong>${tx.code}</strong></span>
+        <span>${dateStr}</span>
+      </div>
+      ${itemsHtml}
+    </div>
+    
+    <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:800; margin-bottom:5px;">
+      <span>TOTAL</span>
+      <span>$${parseFloat(tx.total).toFixed(2)}</span>
+    </div>
+    <p style="text-align:right; font-size:12px; color:var(--primary); margin:0;">Medio: ${tx.method}</p>
+    
+    <div style="text-align:center; margin-top:30px; font-size:12px; color:var(--text-muted);">
+      <p>¡Gracias por su compra!</p>
+      <div style="width:100px; height:100px; background:#f0f0f0; margin:10px auto; display:flex; align-items:center; justify-content:center; border-radius:8px;">
+        <i class="ri-qr-code-line" style="font-size:60px; opacity:0.2;"></i>
+      </div>
+    </div>
   `;
-  document.getElementById('checkout-modal').classList.add('active');
-  document.getElementById('overlay').classList.add('active');
+  openPopup('receipt');
 }
 
 // ─────────────────────────────────────────────
