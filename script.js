@@ -444,7 +444,32 @@ function renderAll() {
     populateSelects();
     renderDiscountRules();
     renderPromos();
+    renderPOSProducts();
     renderCart();
+}
+
+// Render a grid of products for quick POS selection
+function renderPOSProducts() {
+    const container = document.getElementById('pos-products');
+    if (!container) return;
+    if (!products || !products.length) {
+        container.innerHTML = '<div style="color:var(--muted); padding:12px;">No hay productos disponibles.</div>';
+        return;
+    }
+    container.innerHTML = products.map(p => {
+        const img = p.image || '';
+        const name = (p.name || '').replace(/</g,'&lt;');
+        return `
+            <div class="pos-product-card" role="button" tabindex="0" onclick="addProductToCart('${p.code}')" onkeydown="if(event.key==='Enter') addProductToCart('${p.code}')">
+                <img class="pos-product-thumb" src="${img}" alt="${name}">
+                <div class="pos-product-name">${name}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="pos-product-price">$${parseFloat(p.price||0).toFixed(2)}</div>
+                    <div class="pos-product-stock">Stock: ${p.stock||0}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderProductTable() {
