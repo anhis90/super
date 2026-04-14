@@ -1,3 +1,10 @@
+// Safe helper to resolve currentSucursal across modules
+function _getCurrentSucursalSafe(){
+  if (typeof currentSucursal !== 'undefined' && currentSucursal && currentSucursal.id) return currentSucursal;
+  try{ const s = localStorage.getItem('pos_sucursal'); if(s) return JSON.parse(s); }catch(e){}
+  return null;
+}
+
 // ============================================================
 // js/db.js
 // Capa de acceso a datos — TODAS las llamadas a Supabase van aquí
@@ -185,6 +192,14 @@ async function dbSetOpeningCash(value) {
     { key: 'opening_cash', value: value.toString(), sucursal_id: currentSucursal.id },
     { onConflict: 'key,sucursal_id' }
   );
+    const _s = _getCurrentSucursalSafe();
+    if(!_s){
+      console.warn('dbSetOpeningCash blocked: no active sucursal');
+      if(typeof reportMissingSucursal === 'function') reportMissingSucursal('dbSetOpeningCash');
+      // show configuration popup if available
+      try{ if(typeof openPopup === 'function') openPopup('sucursal'); }catch(e){}
+      return { error: 'no_sucursal' };
+    }
   return error;
 }
 
