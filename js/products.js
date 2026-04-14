@@ -148,33 +148,50 @@
     if (window.analyzeBusinessData) window.analyzeBusinessData();
   }
 
-  // Genera una imagen tipo 'foto' de producto usando canvas (sin APIs externas)
+  // Genera una imagen inteligente basada en el nombre del producto
   function generateProductPhoto(label, size = 400) {
-    // canvas in-memory
+    const name = (label || '').toLowerCase();
+    
+    // Mapeo inteligente de palabras clave a imágenes reales de alta calidad (Unsplash)
+    const library = [
+      { keywords: ['yerba'], url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=400' },
+      { keywords: ['leche', 'milk', 'lacteo'], url: 'https://images.unsplash.com/photo-1550583724-125581828cd1?w=400' },
+      { keywords: ['coca', 'cola', 'gaseosa', 'soda'], url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400' },
+      { keywords: ['pan', 'factura', 'bakery'], url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400' },
+      { keywords: ['arroz', 'rice'], url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
+      { keywords: ['fideo', 'pasta'], url: 'https://images.unsplash.com/photo-1551462147-37885acc3c41?w=400' },
+      { keywords: ['carne', 'meat', 'asado'], url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400' },
+      { keywords: ['fruta', 'manzana', 'apple', 'banana'], url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400' },
+      { keywords: ['verdura', 'tomate', 'vegetable'], url: 'https://images.unsplash.com/photo-1566385101042-1a0aa0c12e8c?w=400' },
+      { keywords: ['cerveza', 'beer', 'birra'], url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400' },
+      { keywords: ['vino', 'wine'], url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400' },
+      { keywords: ['limpieza', 'detergente', 'jabon'], url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400' }
+    ];
+
+    const match = library.find(item => item.keywords.some(k => name.includes(k)));
+    if (match) return match.url;
+
+    // Si no hay match, generamos uno dinámico desde Unsplash (requiere internet)
+    // Pero para modo offline, usamos el Canvas como fallback de seguridad
+    if (navigator.onLine) {
+      return `https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80&sig=${Math.random()}`;
+    }
+
+    // Fallback Canvas (Lo que ya existía pero con mejores colores)
+    return generateCanvasPlaceholder(label, size);
+  }
+
+  function generateCanvasPlaceholder(label, size) {
     const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
-    // fondo gradiente
     const seed = Math.abs(hashCode(label || 'p'));
     const colorA = pickColor(seed);
-    const colorB = pickColor(seed + 7);
     const grad = ctx.createLinearGradient(0, 0, size, size);
-    grad.addColorStop(0, colorA); grad.addColorStop(1, colorB);
+    grad.addColorStop(0, colorA); grad.addColorStop(1, '#ffffff');
     ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
-    // Sombra y 'producto' central: rect con borde circular
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    roundRect(ctx, size*0.08, size*0.12, size*0.84, size*0.6, 18, true, false);
-    // dibujo de un 'envase' simple
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    const w = size*0.5, h = size*0.38; const x = (size-w)/2, y = size*0.2;
-    roundRect(ctx, x, y, w, h, 14, true, false);
-    // etiqueta
-    ctx.fillStyle = colorB; roundRect(ctx, x + w*0.1, y + h*0.25, w*0.8, h*0.25, 8, true, false);
-    // texto de nombre (abreviado)
-    ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.floor(size/16) + 'px Arial'; ctx.textAlign = 'center';
-    const short = (label || '').split(' ').slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('') || 'P';
-    ctx.fillText(short, size/2, y + h*0.38);
-    // ruido sutil
-    addNoise(ctx, size, 0.03 * (1 + (seed % 5)));
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.font = 'bold ' + Math.floor(size/5) + 'px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText((label || '?')[0].toUpperCase(), size/2, size/1.8);
     return canvas.toDataURL('image/jpeg', 0.85);
   }
 

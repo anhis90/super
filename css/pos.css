@@ -56,7 +56,7 @@ header{display:flex; flex-direction:column; gap:10px; padding:20px 26px; border-
 /* POS GRID */
 .pos-grid{display:grid; grid-template-columns:1fr 420px; gap:20px; padding:22px; align-items:start}
 .scanner-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-sm); min-height:360px; display:flex; flex-direction:column; gap:14px}
-.cart-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-sm); min-height:360px; display:flex; flex-direction:column; gap:12px}
+.cart-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-lg); height:calc(100vh - 140px); display:flex; flex-direction:column; gap:12px; position:sticky; top:20px; border:1px solid var(--sidebar-accent)}
 
 /* Inputs */
 .input-group input[type="text"], .form-input, #product-code{width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(15,23,42,0.06); outline:none; font-size:15px}
@@ -82,8 +82,9 @@ header{display:flex; flex-direction:column; gap:10px; padding:20px 26px; border-
 .cart-summary{border-top:1px solid rgba(15,23,42,0.04); padding-top:12px; display:flex; flex-direction:column; gap:8px}
 .summary-row{display:flex; justify-content:space-between; color:var(--muted)}
 .summary-row.total{font-size:18px; font-weight:900; color:var(--text)}
-.checkout-btn, .action-btn, .btn-primary{background:linear-gradient(90deg,#5b6bff,#7c3aed); color:#fff; border:none; padding:12px 14px; border-radius:10px; cursor:pointer}
-.checkout-btn{width:100%; margin-top:8px}
+.checkout-btn, .action-btn, .btn-primary{background:linear-gradient(90deg,#5b6bff,#7c3aed); color:#fff; border:none; padding:16px 14px; border-radius:12px; cursor:pointer; font-weight:800; font-size:16px; letter-spacing:1px; box-shadow: 0 4px 12px rgba(124,58,237,0.3)}
+.checkout-btn:hover{transform:scale(1.02); filter:brightness(1.1)}
+.checkout-btn{width:100%; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:10px}
 
 /* Tables & popups consistency */
 .data-table{width:100%; border-collapse:collapse; background:transparent}
