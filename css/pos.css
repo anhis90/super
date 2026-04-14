@@ -54,9 +54,9 @@ header{display:flex; flex-direction:column; gap:10px; padding:20px 26px; border-
 .current-date{color:var(--muted); font-size:13px; padding-left:2px}
 
 /* POS GRID */
-.pos-grid{display:grid; grid-template-columns:1fr 400px; gap:20px; padding:22px; align-items:stretch; height:calc(100vh - 80px); overflow:hidden;}
-.scanner-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:14px; overflow:auto;}
-.cart-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-lg); display:flex; flex-direction:column; gap:12px; border:1px solid var(--sidebar-accent); overflow:hidden; max-height:100%;}
+.pos-grid{display:grid; grid-template-columns:1fr 400px; gap:20px; padding:22px; align-items:start; min-height:calc(100vh - 80px);}
+.scanner-section{background:var(--card); padding:20px; border-radius:var(--radius); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:16px;}
+.cart-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-lg); display:flex; flex-direction:column; gap:12px; border:1px solid var(--sidebar-accent); position:sticky; top:20px; max-height:calc(100vh - 120px); overflow:hidden;}
 
 /* Inputs */
 .input-group input[type="text"], .form-input, #product-code{width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(15,23,42,0.06); outline:none; font-size:15px}

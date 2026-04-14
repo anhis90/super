@@ -665,10 +665,15 @@
     </div>
     <div class="popup-body" style="padding:20px 0;">
       <div class="success-icon">✓</div>
-      <div id="receipt-summary" style="text-align:left; margin:20px 0; font-size:15px; line-height:1.8;"></div>
-      <button class="checkout-btn" onclick="finishCheckout()">
-        <i class="ri-check-line"></i> Finalizar
-      </button>
+      <div id="receipt-summary" style="text-align:left; margin:20px 0; font-size:15px; line-height:1.8; max-height:300px; overflow-y:auto; padding-right:10px;"></div>
+      <div style="display:flex; gap:12px; margin-top:15px;">
+        <button class="action-btn" onclick="window.print()" style="flex:1; background:#334155;">
+          <i class="ri-printer-line"></i> Imprimir Ticket
+        </button>
+        <button class="checkout-btn" onclick="finishCheckout()" style="flex:1; margin-top:0;">
+          <i class="ri-check-line"></i> Finalizar
+        </button>
+      </div>
     </div>
   </div>
 
