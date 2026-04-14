@@ -9,6 +9,7 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/pos.css">
 
   <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -662,6 +663,27 @@
   <script src="js/transactions.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- Small integration helpers: bind logout and date display if available -->
+  <script>
+    (function(){
+      function safeBind(){
+        var btn = document.getElementById('btn-logout') || document.querySelector('.logout-btn');
+        if(btn && window.handleLogout) btn.addEventListener('click', window.handleLogout);
+        var dateEl = document.getElementById('date-display');
+        if(dateEl){
+          function update(){
+            var d = new Date();
+            dateEl.textContent = d.toLocaleString();
+          }
+          update(); setInterval(update, 60000);
+        }
+        // expose minimal hook to recalc layout if needed
+        window.pos_reflow = function(){ document.documentElement.style.setProperty('--reflow','1'); };
+      }
+      if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', safeBind); else safeBind();
+    })();
+  </script>
 
 </body>
 </html>

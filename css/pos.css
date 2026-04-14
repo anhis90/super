@@ -1,0 +1,86 @@
+/* POS layout and visual refresh (pos.css)
+   Modern, clean dashboard/POS look. Overrides older styles where necessary.
+*/
+:root{
+  --bg:#f5f7fb;
+  --sidebar:#1f2937;
+  --sidebar-accent:#6d28d9;
+  --card:#ffffff;
+  --muted:#6b7280;
+  --text:#0f172a;
+  --glass-white: rgba(255,255,255,0.7);
+  --glass-border: rgba(15,23,42,0.06);
+  --shadow-sm: 0 6px 16px rgba(15,23,42,0.06);
+  --shadow-lg: 0 18px 48px rgba(15,23,42,0.12);
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:var(--bg);color:var(--text);}
+.app-container{display:flex; min-height:100vh; height:100vh; overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:260px; background:linear-gradient(180deg,var(--sidebar),#111827); color:#fff; padding:20px 16px; display:flex; flex-direction:column; gap:18px; box-shadow:var(--shadow-sm);}
+.sidebar .logo{font-weight:800; font-size:20px; letter-spacing:0.6px;}
+.sidebar .logo span{color:var(--sidebar-accent);}
+.nav-links{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px;}
+.nav-links li button{display:flex; align-items:center; gap:10px; border:none; background:transparent; color:rgba(255,255,255,0.92); padding:10px 12px; border-radius:10px; cursor:pointer; text-align:left; width:100%;}
+.nav-links li button i{font-size:18px}
+.nav-links li button:hover{background:rgba(255,255,255,0.04); transform:translateX(4px);}
+.nav-links li button[style*="color:var(--primary)"]{background:linear-gradient(90deg,#5b6bff,#7c3aed); color:#fff}
+
+/* MAIN + HEADER */
+.main-content{flex:1; display:flex; flex-direction:column; overflow:auto;}
+header{display:flex; flex-direction:column; gap:10px; padding:20px 26px; border-bottom:1px solid rgba(15,23,42,0.04); background:linear-gradient(180deg, transparent, rgba(255,255,255,0.02));}
+.header-main{display:flex; justify-content:space-between; align-items:center; gap:14px}
+.header-main h1{font-size:20px; margin:0; display:flex; align-items:center; gap:12px}
+.badge{background:rgba(16,185,129,0.12); color:#065f46; padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px}
+.header-actions{display:flex; gap:8px; align-items:center}
+.icon-btn{background:transparent; border:1px solid rgba(15,23,42,0.06); padding:8px; border-radius:10px; cursor:pointer}
+.logout-btn{background:transparent; border:1px solid rgba(15,23,42,0.06); padding:8px 12px; border-radius:10px; cursor:pointer}
+.current-date{color:var(--muted); font-size:13px; padding-left:2px}
+
+/* POS GRID */
+.pos-grid{display:grid; grid-template-columns:1fr 420px; gap:20px; padding:22px; align-items:start}
+.scanner-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-sm); min-height:360px; display:flex; flex-direction:column; gap:14px}
+.cart-section{background:var(--card); padding:18px; border-radius:var(--radius); box-shadow:var(--shadow-sm); min-height:360px; display:flex; flex-direction:column; gap:12px}
+
+/* Inputs */
+.input-group input[type="text"], .form-input, #product-code{width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(15,23,42,0.06); outline:none; font-size:15px}
+.input-group{display:flex; gap:8px}
+
+/* Product preview */
+.product-preview{border:1px dashed rgba(15,23,42,0.04); border-radius:10px; padding:18px}
+
+/* Cart */
+.cart-header{display:flex; align-items:center; justify-content:space-between}
+.cart-items{flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px; padding-right:6px}
+.cart-item{display:flex; gap:12px; align-items:center; padding:10px; border-radius:10px; background:linear-gradient(180deg, rgba(15,23,42,0.02), transparent)}
+.cart-item img{width:56px; height:42px; object-fit:cover; border-radius:6px}
+.cart-summary{border-top:1px solid rgba(15,23,42,0.04); padding-top:12px; display:flex; flex-direction:column; gap:8px}
+.summary-row{display:flex; justify-content:space-between; color:var(--muted)}
+.summary-row.total{font-size:18px; font-weight:900; color:var(--text)}
+.checkout-btn, .action-btn, .btn-primary{background:linear-gradient(90deg,#5b6bff,#7c3aed); color:#fff; border:none; padding:12px 14px; border-radius:10px; cursor:pointer}
+.checkout-btn{width:100%; margin-top:8px}
+
+/* Tables & popups consistency */
+.data-table{width:100%; border-collapse:collapse; background:transparent}
+.data-table th, .data-table td{padding:10px 8px; text-align:left; border-bottom:1px solid rgba(15,23,42,0.04)}
+.popup{background:transparent}
+.popup .popup-body{background:transparent}
+
+/* STAT CARDS */
+.stat-card{background:var(--card); padding:16px; border-radius:12px; box-shadow:var(--shadow-sm)}
+.dashboard-stats{display:flex; gap:12px}
+
+/* Helpers */
+.badge-ghost{background:rgba(124,58,237,0.08); color:#7c3aed; padding:6px 8px; border-radius:8px}
+
+/* Responsive */
+@media (max-width:1100px){ .pos-grid{grid-template-columns:1fr 360px} }
+@media (max-width:880px){ .app-container{flex-direction:column} .sidebar{width:100%; flex-direction:row; gap:10px; align-items:center; padding:12px} .pos-grid{grid-template-columns:1fr} .cart-section{order:2} .scanner-section{order:1} }
+
+/* subtle transitions */
+.nav-links li button, .checkout-btn, .action-btn, .icon-btn{transition:all .14s ease}
+
+/* Avoid accidental overflows */
+body, .app-container, .main-content{min-width:0}
