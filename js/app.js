@@ -74,6 +74,12 @@ async function initApp() {
       loadProducts();
     }
 
+    // Garantizar que siempre haya una sucursal activa para no bloquear el cobro
+    if (!window.currentSucursal && typeof createSucursalFromForm === 'function') {
+      console.log('Creando sucursal por defecto para evitar bloqueos...');
+      await createSucursalFromForm(true); // Crear por defecto silenciosamente
+    }
+
     if (typeof analyzeBusinessData === 'function') analyzeBusinessData();
     showMain();              // función en ui.js
   } else {

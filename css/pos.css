@@ -43,7 +43,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe U
 .nav-popup-item:hover{background:linear-gradient(90deg, rgba(93,90,255,0.06), rgba(124,58,237,0.06)); transform:translateX(6px)}
 
 /* MAIN + HEADER */
-.main-content{flex:1; display:flex; flex-direction:column; overflow:auto;}
+.main-content{flex:1; display:flex; flex-direction:column; overflow:visible; min-height:0;}
 header{display:flex; flex-direction:column; gap:10px; padding:20px 26px; border-bottom:1px solid rgba(15,23,42,0.04); background:linear-gradient(180deg, transparent, rgba(255,255,255,0.02));}
 .header-main{display:flex; justify-content:space-between; align-items:center; gap:14px}
 .header-main h1{font-size:20px; margin:0; display:flex; align-items:center; gap:12px}
