@@ -191,10 +191,13 @@ async function deleteProduct(code) {
   const prod = products.find(p => p.code === code);
   if (!prod) return;
   const error = await dbDeleteProduct(prod.id);
-  if (error) alert(error.message);
-  else {
+  if (error) {
+    alert('Error al eliminar: ' + error.message);
+  } else {
+    // Importante: Recargar de la fuente de verdad (Supabase)
     await loadInitialData();
-    renderProductTable();
+    // RenderAll actualiza tanto la lista local como la grilla de ventas POS
+    renderAll();
   }
 }
 
@@ -605,7 +608,6 @@ window.toggleForm = function(id, titleEl) {
   if (!el) return;
   const icon = titleEl.querySelector('i');
   if (el.style.display === 'none') {
-    el.style.display = 'flex'; // Usando flex u block según el caso, input-inline suele ser flex pero en style.css dice display:flex para .input-inline y display:block para div standard. Si es input-inline lo hace el navegador
     if (el.classList.contains('input-inline')) {
        el.style.display = 'flex';
     } else {
@@ -617,3 +619,26 @@ window.toggleForm = function(id, titleEl) {
     if (icon) icon.style.transform = 'rotate(0deg)';
   }
 };
+
+window.toggleDropdown = function(id, event) {
+  if (event) event.stopPropagation();
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // Cerrar cualquier otro dropdown activo
+  document.querySelectorAll('.dropdown-menu.active').forEach(d => {
+    if (d.id !== id) d.classList.remove('active');
+  });
+
+  // Alternar el actual
+  el.classList.toggle('active');
+};
+
+// Cerrar todos los dropdowns al hacer clic fuera
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.dropdown-container')) {
+    document.querySelectorAll('.dropdown-menu.active').forEach(d => {
+      d.classList.remove('active');
+    });
+  }
+});
