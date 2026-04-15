@@ -77,14 +77,14 @@
         <div id="login-error" class="login-error" role="alert"></div>
 
         <div class="form-group">
-          <label for="login-user">Usuario</label>
-          <input class="form-input" type="text" id="login-user" placeholder="admin o cajero" autocomplete="username">
+          <label for="login-email">Correo Electrónico (Email)</label>
+          <input class="form-input" type="email" id="login-email" placeholder="ejemplo@correo.com" autocomplete="username" required>
         </div>
 
         <div class="form-group">
           <label for="login-pass">Contraseña</label>
           <div class="password-row">
-            <input class="form-input" type="password" id="login-pass" placeholder="••••" autocomplete="current-password">
+            <input class="form-input" type="password" id="login-pass" placeholder="••••" autocomplete="current-password" required>
             <button type="button" id="pwd-toggle" class="pwd-toggle" aria-label="Mostrar contraseña">👁️</button>
           </div>
         </div>
@@ -93,8 +93,6 @@
           <button type="submit" id="btn-login" class="btn-primary" disabled>Ingresar al sistema</button>
           <div id="loading-spinner" style="display:none;">⏳</div>
         </div>
-
-        <p style="margin-top:12px; color:#6b7280; font-size:13px;">Usuario demo: <strong>admin</strong> / <strong>cajero</strong>  ·  Contraseña: <strong>1234</strong></p>
       </form>
     </div>
   </div>

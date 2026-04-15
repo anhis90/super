@@ -1,7 +1,7 @@
 // ============================================================
 // supabase-client.js
 // Inicializa el cliente de Supabase y lo expone como window.sb
-// NO se usa Supabase Auth — solo operaciones CRUD de base de datos
+// Integra funcionalidades completas incluyendo Supabase Auth
 // ============================================================
 
 const SUPABASE_URL = 'https://hhhyexgsfflzzsflpsqs.supabase.co';
@@ -11,10 +11,4 @@ const SUPABASE_KEY = 'sb_publishable_9ujBRAnvDfBmtrPSNY6hBg__tHkQXX6';
 
 // Usamos window.sb para evitar conflictos con la variable global "supabase"
 // que es inyectada automáticamente por el CDN de Supabase
-window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
-  }
-});
+window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
