@@ -188,15 +188,27 @@ async function addNewProduct() {
 
 async function deleteProduct(code) {
   if (!confirm('¿Eliminar producto?')) return;
-  const prod = products.find(p => p.code === code);
-  if (!prod) return;
+  // Convertir ambos a String para evitar fallos si el 'code' en cache es numérico y el parámetro es texto
+  const prod = products.find(p => String(p.code) === String(code));
+  
+  if (!prod) {
+    alert('Error: Producto no encontrado en memoria. Intente recargar la página.');
+    return;
+  }
+  
   const error = await dbDeleteProduct(prod.id);
+  
   if (error) {
-    alert('Error al eliminar: ' + error.message);
+    // 23503: código de error SQL de Postgres para violación de ForeignKey (Integridad referencial)
+    if (error.code === '23503') {
+      alert('⚠️ No se puede eliminar el producto porque tiene ventas asociadas en el historial. Anule las ventas primero o contacte soporte si requiere eliminar su histórico.');
+    } else {
+      alert('Error en la base de datos al eliminar: ' + error.message);
+    }
   } else {
     // Importante: Recargar de la fuente de verdad (Supabase)
     await loadInitialData();
-    // RenderAll actualiza tanto la lista local como la grilla de ventas POS
+    // RenderAll actualiza tanto la lista local como la grilla de ventas POS instantáneamente
     renderAll();
   }
 }
