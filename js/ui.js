@@ -162,20 +162,37 @@ async function addNewProduct() {
   const name  = document.getElementById('new-prod-name').value.trim();
   const price = parseFloat(document.getElementById('new-prod-price').value);
   const stock = parseInt(document.getElementById('new-prod-stock').value) || 0;
+  
+  // Capturar la imagen (ya sea subida o generada por IA)
+  const imgInput = document.getElementById('new-prod-img');
+  const imgData = window._generatedProductImage || null; 
 
   if (!code || !name || isNaN(price)) {
     alert('Completá todos los campos correctamente');
     return;
   }
 
-  const error = await dbAddProduct(code, name, price, stock);
+  const error = await dbAddProduct(code, name, price, stock, imgData);
   if (error) {
     alert('Error: ' + error.message);
   } else {
     await loadInitialData();
     renderAll();
     alert('✅ Producto añadido');
-    document.querySelectorAll('#popup-lista input').forEach(i => i.value = '');
+    
+    // Limpiar formulario
+    document.getElementById('new-prod-name').value = '';
+    document.getElementById('new-prod-price').value = '';
+    document.getElementById('new-prod-stock').value = '';
+    if (imgInput) imgInput.value = '';
+    const preview = document.getElementById('new-prod-img-preview');
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    window._generatedProductImage = null;
+    
+    // Generar siguiente código (usando función de products.js si existe)
+    if (typeof getNextProductCode === 'function') {
+      document.getElementById('new-prod-code').value = getNextProductCode();
+    }
   }
 }
 

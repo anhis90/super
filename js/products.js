@@ -22,12 +22,7 @@
   function tryParseJSON(v) { try { return JSON.parse(v); } catch (e) { return null; } }
 
   function loadProducts() {
-    const fromWindow = window.products;
-    if (Array.isArray(fromWindow)) return fromWindow;
-    const ls = tryParseJSON(localStorage.getItem(STORAGE_KEY));
-    if (Array.isArray(ls)) { window.products = ls; return ls; }
-    window.products = [];
-    return window.products;
+    return window.products || [];
   }
 
   // Devuelve el siguiente código disponible en formato 'NNN' (3 dígitos, con ceros a la izquierda)
@@ -55,7 +50,6 @@
 
   function saveProducts(arr) {
     window.products = arr;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) { console.warn('No se pudo guardar products en localStorage', e); }
   }
 
   function renderProductTable() {
@@ -77,7 +71,16 @@
       const tdStock = document.createElement('td'); tdStock.innerText = String(p.stock || 0);
       const tdActions = document.createElement('td'); tdActions.className = 'admin-only';
       const delBtn = document.createElement('button'); delBtn.className = 'action-btn'; delBtn.innerHTML = '<i class="ri-delete-bin-line"></i>';
-      delBtn.onclick = () => { deleteProduct(p.code); };
+      delBtn.onclick = async () => { 
+        if(confirm('¿Eliminar producto?')) {
+          const err = await dbDeleteProduct(p.id);
+          if(err) alert(err.message);
+          else {
+            await loadInitialData();
+            renderProductTable();
+          }
+        }
+      };
       tdActions.appendChild(delBtn);
 
       tr.appendChild(tdCode); tr.appendChild(tdImg); tr.appendChild(tdName); tr.appendChild(tdPrice); tr.appendChild(tdStock); tr.appendChild(tdActions);
@@ -107,14 +110,12 @@
 
   // Función expuesta en el HTML
   async function addNewProduct() {
-    // leer el código del input (ahora se autocompleta y es readonly)
     const code = document.getElementById('new-prod-code')?.value?.trim();
     const name = document.getElementById('new-prod-name')?.value?.trim();
     const priceRaw = document.getElementById('new-prod-price')?.value;
     const stockRaw = document.getElementById('new-prod-stock')?.value;
     const imgInput = document.getElementById('new-prod-img');
 
-    // Código ya ha sido autocompletado en el input; validamos y si por alguna razón está vacío, generamos uno
     let finalCode = code || getNextProductCode();
     if (!finalCode || !name) { alert('Nombre es obligatorio'); return; }
 
@@ -122,35 +123,32 @@
     const stock = parseInt(stockRaw) || 0;
 
     const imgData = await readImageAsDataURL(imgInput);
-    // If no image provided, generate a product photo-like image via canvas (offline IA)
-    // preferir imagen subida, luego imagen generada por el botón, luego auto-foto
     const finalImg = imgData || window._generatedProductImage || generateProductPhoto(name || finalCode);
-    const products = loadProducts();
-    // Evitar duplicados por código: si existe, actualizar
-    const existingIndex = products.findIndex(p => p.code === code);
-    const productObj = { id: Date.now(), code, name, price, stock, image: finalImg || '' };
-    if (existingIndex >= 0) {
-      // Si existe, mantenemos el ID original si lo tiene
-      productObj.id = products[existingIndex].id || productObj.id;
-      products[existingIndex] = productObj;
-    } else {
-      products.push(productObj);
+
+    // Guardar en Supabase
+    const err = await dbAddProduct(finalCode, name, price, stock, finalImg);
+    if (err) {
+      alert('Error al guardar en base de datos: ' + err.message);
+      return;
     }
 
-    saveProducts(products);
+    // Recargar datos desde Supabase para asegurar sincronización
+    if (typeof loadInitialData === 'function') {
+      await loadInitialData();
+    }
+    
     renderProductTable();
-    // Limpiar formulario excepto el código: preparar el siguiente código automáticamente
+
+    // Limpiar formulario y preparar el siguiente código
     document.getElementById('new-prod-name').value = '';
     document.getElementById('new-prod-price').value = '';
     document.getElementById('new-prod-stock').value = '';
     document.getElementById('new-prod-code').value = getNextProductCode();
-    document.getElementById('new-prod-name').value = '';
-    // limpiar imagen subida y preview
     if (imgInput) { imgInput.value = ''; }
-    const preview = document.getElementById('new-prod-img-preview'); if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    const preview = document.getElementById('new-prod-img-preview'); 
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
     window._generatedProductImage = null;
 
-    // Notificar a otros módulos
     if (window.analyzeBusinessData) window.analyzeBusinessData();
   }
 

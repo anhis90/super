@@ -90,10 +90,10 @@ async function loadInitialData() {
 // PRODUCTOS
 // ─────────────────────────────────────────────
 
-async function dbAddProduct(code, name, price, stock) {
+async function dbAddProduct(code, name, price, stock, image) {
   const { error } = await sb.from('productos').insert([{
     code, name, price, stock,
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80',
+    image: image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80',
     sucursal_id: currentSucursal.id
   }]);
   return error;

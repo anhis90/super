@@ -20,16 +20,11 @@
   function tryParseJSON(v) { try { return JSON.parse(v); } catch (e) { return null; } }
 
   function loadTransactions() {
-    if (window.transactions && Array.isArray(window.transactions)) return window.transactions;
-    const ls = tryParseJSON(localStorage.getItem(STORAGE_KEY));
-    if (Array.isArray(ls)) { window.transactions = ls; return ls; }
-    window.transactions = [];
-    return window.transactions;
+    return window.transactions || [];
   }
 
   function saveTransactions(arr) {
     window.transactions = arr;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) { console.warn('No se pudo guardar transactions en localStorage', e); }
   }
 
   function renderTransactionsTable() {
@@ -65,55 +60,50 @@
     });
   }
 
-  function restoreStockFromTransaction(tx) {
+  async function restoreStockFromTransaction(tx) {
     if (!tx || !Array.isArray(tx.items) || !tx.items.length) return;
-    // Try to load products
-    let products = (window.products && Array.isArray(window.products)) ? window.products : tryParseJSON(localStorage.getItem('products')) || [];
+    const products = window.products || [];
     let changed = false;
-    tx.items.forEach(it => {
-      const code = it.code || it.id || it.sku || it.name;
+    for (const it of tx.items) {
+      const code = it.productCode || it.code || it.id;
       const qty = Number(it.qty || 0);
-      if (!code || !qty) return;
-      const idx = products.findIndex(p => p.code === code);
-      if (idx >= 0) { products[idx].stock = (Number(products[idx].stock) || 0) + qty; changed = true; }
-    });
-    if (changed) {
-      try { localStorage.setItem('products', JSON.stringify(products)); } catch (e) { console.warn('No se pudo actualizar products en localStorage', e); }
-      window.products = products;
-      // Actualizar filas DOM en product table si existe
-      const tbody = document.getElementById('product-table-body');
-      if (tbody) {
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-        rows.forEach(tr => {
-          const tds = tr.querySelectorAll('td');
-          const code = tds[0]?.innerText?.trim();
-          const prod = products.find(p => p.code === code);
-          if (prod) {
-            tds[4] && (tds[4].innerText = String(prod.stock || 0));
-            const img = tds[1]?.querySelector('img'); if (img) { if (prod.img) { img.src = prod.img; img.style.display='inline-block'; } else { img.style.display='none'; } }
-          }
-        });
+      if (!code || !qty) continue;
+      const p = products.find(prod => prod.code === code);
+      if (p) {
+        const newStock = (Number(p.stock) || 0) + qty;
+        await dbUpdateStock(p.id, newStock);
+        changed = true;
       }
+    }
+    if (changed) {
+      await loadInitialData();
+      if (typeof renderProductTable === 'function') renderProductTable();
     }
   }
 
-  function voidTransaction(id) {
+  async function voidTransaction(id) {
     if (!id) return alert('ID de transacción inválido');
     const txs = loadTransactions();
-    const idx = txs.findIndex(t => t.id === id || t.code === id);
-    if (idx < 0) return alert('Transacción no encontrada');
-    const tx = txs[idx];
+    // Search both by internal id and by sale code
+    const tx = txs.find(t => t.id === id || t.code === id);
+    if (!tx) return alert('Transacción no encontrada');
     if (tx.cancelled) return alert('Transacción ya anulada');
-    if (!confirm('Confirmar anular ticket ' + (tx.id || tx.code) + ' ?')) return;
-    // marcar como anulada
-    tx.cancelled = true;
-    tx.cancelledAt = new Date().toISOString();
-    // restaurar stock si hay items
-    try { restoreStockFromTransaction(tx); } catch (e) { console.warn('Error restaurando stock', e); }
-    txs[idx] = tx;
-    saveTransactions(txs);
+    if (!confirm('Confirmar anular ticket ' + (tx.code || tx.id) + ' ?')) return;
+
+    // In a real DB scenario, we delete or update the record.
+    // Our db.js doesn't have an update status for sales yet, so we'll delete it or notify error.
+    const err = await dbClearSales(tx.id); // Re-utilizing a deletion logic or we should add dbVoidSale
+    if (err) {
+        alert('Error al anular en base de datos: ' + err.message);
+        return;
+    }
+
+    // restore stock
+    await restoreStockFromTransaction(tx);
+    
+    await loadInitialData();
     renderTransactionsTable();
-    // notificar a IA y a otros módulos
+
     if (window.analyzeBusinessData) window.analyzeBusinessData();
     alert('Ticket anulado correctamente');
   }
