@@ -1,6 +1,6 @@
 /* 
    js/auth.js
-   Sistema de Autenticación Local — Seguridad Reforzada
+   Sistema de Autenticación Local — Demo / POS
 */
 
 (function() {
@@ -17,15 +17,16 @@
      * checkSession() 
      */
     window.checkSession = async function() {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-            currentUser = { 
-                username: session.user.user_metadata?.username || session.user.email.split('@')[0], 
-                role: session.user.user_metadata?.role || 'cajero',
-                id: session.user.id
-            };
-            updateUIForUser(currentUser);
-            return true;
+        const sessionData = localStorage.getItem(SESSION_KEY);
+        if (sessionData) {
+            try {
+                const sessionUser = JSON.parse(sessionData);
+                currentUser = sessionUser;
+                updateUIForUser(currentUser);
+                return true;
+            } catch (e) {
+                localStorage.removeItem(SESSION_KEY);
+            }
         }
         return false;
     };
@@ -45,45 +46,50 @@
         if (errEl) errEl.style.display = 'none';
 
         if (!userInput || !password) {
-            showLoginError('Por favor, ingresa usuario y contraseña');
+            showLoginError('Por favor, ingresa usuario y contraseña.');
             return;
         }
 
         if (btn) btn.disabled = true;
 
-        // Convertir usuario simple a email si es necesario
-        const email = userInput.includes('@') ? userInput : `${userInput}@pos.com`;
+        // AUTH LOCAL: Validar estrictamente contra los usuarios configurados
+        const foundUser = VALID_USERS.find(
+            (u) => u.username.toLowerCase() === userInput && u.password === password
+        );
 
-        const { data, error } = await sb.auth.signInWithPassword({
-            email,
-            password
-        });
-
-        if (error) {
-            showLoginError('❌ Credenciales inválidas o error de conexión');
+        if (!foundUser) {
+            showLoginError('❌ Usuario o contraseña incorrectos.');
             if (btn) btn.disabled = false;
             return;
         }
 
         // Éxito
         currentUser = { 
-            username: data.user.user_metadata?.username || userInput, 
-            role: data.user.user_metadata?.role || 'cajero',
-            id: data.user.id
+            username: foundUser.username,
+            role: foundUser.role,
+            name: foundUser.name,
+            id: foundUser.username // Identificador local
         };
 
+        localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
         updateUIForUser(currentUser);
         
         try {
             if (typeof loadInitialData === 'function') await loadInitialData();
-        } catch (e) { console.warn('Carga inicial fallida:', e); }
+        } catch (e) { 
+            console.warn('Carga inicial fallida. Verifique conexión a DB:', e); 
+            // Si cargaDatos falla por base de datos, mostramos un error de conexión real
+            showLoginError('Fallo de conexión a la base de datos al cargar los datos.');
+            if (btn) btn.disabled = false;
+            return;
+        }
 
         if (typeof showMain === 'function') showMain();
         if (btn) btn.disabled = false;
     };
 
     window.handleLogout = async function() {
-        await sb.auth.signOut();
+        localStorage.removeItem(SESSION_KEY);
         currentUser = null;
         if (typeof showLogin === 'function') showLogin();
         window.location.reload();
