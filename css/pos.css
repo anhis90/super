@@ -16,7 +16,7 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:var(--bg);color:var(--text);}
-.app-container{display:flex; min-height:100vh; height:100vh; overflow:hidden;}
+.app-container{display:flex; min-height:100vh; height:auto; overflow:visible; background:var(--bg)}
 
 /* SIDEBAR */
 .sidebar{width:260px; background:linear-gradient(180deg,var(--sidebar),#111827); color:#fff; padding:20px 16px; display:flex; flex-direction:column; gap:18px; box-shadow:var(--shadow-sm);}

@@ -152,43 +152,27 @@
   function generateProductPhoto(label, size = 400) {
     const name = (label || '').toLowerCase();
     
-    // Librería MASIVA de imágenes reales (LoremFlickr - Mayor compatibilidad)
-    const library = [
-      { keywords: ['yerba', 'mate', 'yerba mate'], url: 'https://loremflickr.com/400/400/yerba,mate/all' },
-      { keywords: ['leche', 'milk', 'lacteo', 'yogur', 'queso', 'crema'], url: 'https://loremflickr.com/400/400/milk,cheese/all' },
-      { keywords: ['coca', 'cola', 'gaseosa', 'soda', 'pepsi', 'sprite'], url: 'https://loremflickr.com/400/400/soda,coke/all' },
-      { keywords: ['pan', 'factura', 'bakery', 'galletita', 'bizcocho'], url: 'https://loremflickr.com/400/400/bread,bakery/all' },
-      { keywords: ['arroz', 'rice', 'legumbre'], url: 'https://loremflickr.com/400/400/rice,legumes/all' },
-      { keywords: ['fideo', 'pasta', 'tallarin', 'ravioles'], url: 'https://loremflickr.com/400/400/pasta,spaghetti/all' },
-      { keywords: ['carne', 'meat', 'asado', 'pollo', 'vaca'], url: 'https://loremflickr.com/400/400/meat,beef/all' },
-      { keywords: ['fruta', 'manzana', 'apple', 'banana', 'naranja'], url: 'https://loremflickr.com/400/400/fruit,apple/all' },
-      { keywords: ['verdura', 'tomate', 'vegetable', 'lechuga', 'papa'], url: 'https://loremflickr.com/400/400/vegetables,tomato/all' },
-      { keywords: ['cerveza', 'beer', 'birra', 'heineken'], url: 'https://loremflickr.com/400/400/beer,bottle/all' },
-      { keywords: ['vino', 'wine', 'malbec'], url: 'https://loremflickr.com/400/400/wine,bottle/all' },
-      { keywords: ['limpieza', 'detergente', 'jabon', 'lavandina'], url: 'https://loremflickr.com/400/400/cleaning,soap/all' },
-      { keywords: ['snack', 'papa frita', 'lays', 'cheetos'], url: 'https://loremflickr.com/400/400/snacks,chips/all' },
-      { keywords: ['cafe', 'coffee', 'nespresso'], url: 'https://loremflickr.com/400/400/coffee,cup/all' },
-      { keywords: ['chocolate', 'caramelo', 'dulce', 'alfajor'], url: 'https://loremflickr.com/400/400/chocolate,candy/all' },
-      { keywords: ['agua', 'water', 'mineral'], url: 'https://loremflickr.com/400/400/water,bottle/all' },
-      { keywords: ['aceite', 'oil', 'cocina'], url: 'https://loremflickr.com/400/400/oil,cooking/all' },
-      { keywords: ['harina', 'flour'], url: 'https://loremflickr.com/400/400/flour,baking/all' },
-      { keywords: ['azucar', 'sugar'], url: 'https://loremflickr.com/400/400/sugar,sweet/all' },
-      { keywords: ['sal', 'salt'], url: 'https://loremflickr.com/400/400/salt,food/all' },
-      { keywords: ['huevo', 'egg'], url: 'https://loremflickr.com/400/400/eggs/all' },
-      { keywords: ['helado', 'ice cream'], url: 'https://loremflickr.com/400/400/icecream/all' }
+      { keywords: ['yerba', 'mate', 'yerba mate'], url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=400' },
+      { keywords: ['leche', 'milk', 'lacteo'], url: 'https://images.unsplash.com/photo-1550583724-125581828cd1?w=400' },
+      { keywords: ['azucar', 'sugar'], url: 'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=400' },
+      { keywords: ['coca', 'cola', 'gaseosa', 'soda'], url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400' },
+      { keywords: ['pan', 'factura', 'bakery'], url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400' },
+      { keywords: ['queso', 'cheese'], url: 'https://images.unsplash.com/photo-1485921325814-af97df71f3ea?w=400' },
+      { keywords: ['fideo', 'pasta', 'tallarin'], url: 'https://images.unsplash.com/photo-1551462147-37885acc3c41?w=400' },
+      { keywords: ['carne', 'meat', 'beef'], url: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400' },
+      { keywords: ['fruta', 'manzana', 'apple'], url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400' },
+      { keywords: ['verdura', 'tomate', 'vegetable'], url: 'https://images.unsplash.com/photo-1566385101042-1a0aa0c12e8c?w=400' },
+      { keywords: ['higiene', 'jabon', 'shampoo'], url: 'https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=400' },
+      { keywords: ['almacen', 'comida'], url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400' }
     ];
 
     const match = library.find(item => item.keywords.some(k => name.includes(k)));
     if (match) return match.url;
 
-    // Búsqueda inteligente por categorías generales
-    if (name.includes('almacen') || name.includes('comida')) return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
-    if (name.includes('bebida') || name.includes('tomar')) return 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?w=400';
-    if (name.includes('higiene') || name.includes('baño') || name.includes('cuid')) return 'https://images.unsplash.com/photo-1583947581924-860bda6a26df?w=400';
-
-    // Fallback dinámico con palabras clave si no hay match exacto
-    if (navigator.onLine && name.length > 2) {
-      return `https://loremflickr.com/400/400/grocery,${encodeURIComponent(name)}/all`;
+    // Fallback dinámico ultra-específico (Product Only)
+    if (navigator.onLine && name.length >= 3) {
+      // Usamos Pixabay o Unsplash con filtros de "comida" o "producto" para evitar gráficos/tablas
+      return `https://source.unsplash.com/featured/400x400/?supermarket,product,${encodeURIComponent(name)}`;
     }
 
     // Fallback absoluto: Canvas estético
