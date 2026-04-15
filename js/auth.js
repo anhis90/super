@@ -16,21 +16,16 @@
     /**
      * checkSession() 
      */
-    window.checkSession = function() {
-        const stored = localStorage.getItem(SESSION_KEY);
-        if (stored) {
-            try {
-                const sessionData = JSON.parse(stored);
-                // Validar que la sesión sea legítima (que el usuario exista)
-                const exists = VALID_USERS.some(u => u.username === sessionData.username);
-                if (exists) {
-                    currentUser = sessionData;
-                    updateUIForUser(currentUser);
-                    return true;
-                }
-            } catch (e) {
-                localStorage.removeItem(SESSION_KEY);
-            }
+    window.checkSession = async function() {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+            currentUser = { 
+                username: session.user.user_metadata?.username || session.user.email.split('@')[0], 
+                role: session.user.user_metadata?.role || 'cajero',
+                id: session.user.id
+            };
+            updateUIForUser(currentUser);
+            return true;
         }
         return false;
     };
@@ -44,41 +39,54 @@
         const errEl   = document.getElementById('login-error');
         const btn     = document.getElementById('btn-login');
 
-        const username = userInp.value.trim().toLowerCase();
+        const userInput = userInp.value.trim().toLowerCase();
         const password = passInp.value.trim();
 
         if (errEl) errEl.style.display = 'none';
 
-        // REQUISITO ESTRICTO: Usuario y Contraseña obligatorios
-        if (!username || !password) {
+        if (!userInput || !password) {
             showLoginError('Por favor, ingresa usuario y contraseña');
             return;
         }
 
-        // Deshabilitar botón para evitar doble envío
         if (btn) btn.disabled = true;
 
-        // Validar credenciales
-        const user = VALID_USERS.find(u => u.username === username && u.password === password);
+        // Convertir usuario simple a email si es necesario
+        const email = userInput.includes('@') ? userInput : `${userInput}@pos.com`;
 
-        if (!user) {
-            showLoginError('❌ Usuario o contraseña incorrectos');
+        const { data, error } = await sb.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            showLoginError('❌ Credenciales inválidas o error de conexión');
             if (btn) btn.disabled = false;
             return;
         }
 
         // Éxito
-        currentUser = { username: user.username, role: user.role, name: user.name };
-        localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+        currentUser = { 
+            username: data.user.user_metadata?.username || userInput, 
+            role: data.user.user_metadata?.role || 'cajero',
+            id: data.user.id
+        };
 
         updateUIForUser(currentUser);
         
         try {
             if (typeof loadInitialData === 'function') await loadInitialData();
-        } catch (e) { console.warn(e); }
+        } catch (e) { console.warn('Carga inicial fallida:', e); }
 
         if (typeof showMain === 'function') showMain();
         if (btn) btn.disabled = false;
+    };
+
+    window.handleLogout = async function() {
+        await sb.auth.signOut();
+        currentUser = null;
+        if (typeof showLogin === 'function') showLogin();
+        window.location.reload();
     };
 
     function showLoginError(msg) {
@@ -90,23 +98,6 @@
             alert(msg);
         }
     }
-
-    /**
-     * handleLogout()
-     */
-    window.handleLogout = function() {
-        currentUser = null;
-        localStorage.removeItem(SESSION_KEY);
-        // Limpiar campos del login
-        const u = document.getElementById('login-user');
-        const p = document.getElementById('login-pass');
-        if (u) u.value = '';
-        if (p) p.value = '';
-        
-        if (typeof showLogin === 'function') showLogin();
-        // Recargar para limpiar estado de memoria
-        window.location.reload();
-    };
 
     function updateUIForUser(user) {
         const badge = document.getElementById('user-role-badge');

@@ -140,6 +140,11 @@ async function dbClearSales() {
   return error;
 }
 
+async function dbVoidSale(ventaId) {
+  const { error } = await sb.from('ventas').delete().eq('id', ventaId);
+  return error;
+}
+
 // ─────────────────────────────────────────────
 // PROVEEDORES
 // ─────────────────────────────────────────────

@@ -301,8 +301,10 @@
     <div class="popup-body">
       <!-- Formulario alta de producto (solo admin) -->
       <div class="admin-only" style="margin-bottom:20px;">
-        <h4 style="margin-bottom:10px;">➕ Nuevo Producto</h4>
-        <div class="input-inline">
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-nuevo-producto', this)">
+          ➕ Nuevo Producto <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-nuevo-producto" class="input-inline" style="display:none;">
           <input type="text"   id="new-prod-code"  placeholder="Código (ej: 001)" readonly title="Código generado automáticamente">
           <input type="text"   id="new-prod-name"  placeholder="Nombre del producto">
           <input type="number" id="new-prod-price" placeholder="Precio $" min="0" step="0.01">
@@ -343,8 +345,10 @@
     </div>
     <div class="popup-body">
       <div class="admin-only" style="margin-bottom:20px;">
-        <h4 style="margin-bottom:10px;">➕ Nuevo Proveedor</h4>
-        <div class="input-inline">
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-nuevo-proveedor', this)">
+          ➕ Nuevo Proveedor <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-nuevo-proveedor" class="input-inline" style="display:none;">
           <input type="text" id="prov-name"    placeholder="Nombre del proveedor">
           <input type="text" id="prov-contact" placeholder="Teléfono / Email">
           <button class="action-btn" onclick="addSupplier()">
@@ -375,18 +379,22 @@
     </div>
     <div class="popup-body">
       <div class="admin-only" style="margin-bottom:20px;">
-        <h4 style="margin-bottom:10px;">📦 Registrar Compra</h4>
-        <div class="form-group">
-          <label>Proveedor</label>
-          <select id="compra-prov"></select>
-        </div>
-        <div class="input-inline">
-          <input type="text"   id="compra-code" placeholder="Código producto">
-          <input type="number" id="compra-qty"  placeholder="Cantidad" min="1">
-          <input type="number" id="compra-cost" placeholder="Costo unitario $" min="0" step="0.01">
-          <button class="action-btn" onclick="registerPurchase()">
-            <i class="ri-add-line"></i> Registrar
-          </button>
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-registrar-compra', this)">
+          📦 Registrar Compra <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-registrar-compra" style="display:none;">
+          <div class="form-group">
+            <label>Proveedor</label>
+            <select id="compra-prov"></select>
+          </div>
+          <div class="input-inline">
+            <input type="text"   id="compra-code" placeholder="Código producto">
+            <input type="number" id="compra-qty"  placeholder="Cantidad" min="1">
+            <input type="number" id="compra-cost" placeholder="Costo unitario $" min="0" step="0.01">
+            <button class="action-btn" onclick="registerPurchase()">
+              <i class="ri-add-line"></i> Registrar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -462,8 +470,10 @@
 
       <!-- Establecer apertura (solo admin) -->
       <div class="admin-only" style="margin-bottom:20px;">
-        <h4 style="margin-bottom:10px;">💵 Monto de Apertura</h4>
-        <div class="input-inline">
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-monto-apertura', this)">
+          💵 Monto de Apertura <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-monto-apertura" class="input-inline" style="display:none;">
           <input type="number" id="opening-cash-input-caja" placeholder="Monto inicial $" min="0" step="0.01">
           <button class="action-btn" onclick="setOpeningCash()">Establecer</button>
         </div>
@@ -471,20 +481,24 @@
 
       <!-- Registrar movimiento -->
       <div class="admin-only">
-        <h4 style="margin-bottom:10px;">📝 Registrar Movimiento</h4>
-        <div class="form-group">
-          <label>Tipo</label>
-          <select id="caja-tipo">
-            <option value="Ingreso">Ingreso</option>
-            <option value="Egreso">Egreso</option>
-          </select>
-        </div>
-        <div class="input-inline">
-          <input type="number" id="caja-monto"  placeholder="Monto $" min="0" step="0.01">
-          <input type="text"   id="caja-motivo" placeholder="Motivo / descripción">
-          <button class="action-btn" onclick="registerCajaOp()">
-            <i class="ri-check-line"></i> Registrar
-          </button>
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-registrar-movimiento', this)">
+          📝 Registrar Movimiento <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-registrar-movimiento" style="display:none;">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="caja-tipo">
+              <option value="Ingreso">Ingreso</option>
+              <option value="Egreso">Egreso</option>
+            </select>
+          </div>
+          <div class="input-inline">
+            <input type="number" id="caja-monto"  placeholder="Monto $" min="0" step="0.01">
+            <input type="text"   id="caja-motivo" placeholder="Motivo / descripción">
+            <button class="action-btn" onclick="registerCajaOp()">
+              <i class="ri-check-line"></i> Registrar
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -530,8 +544,10 @@
     </div>
     <div class="popup-body">
       <div class="admin-only" style="margin-bottom:20px;">
-        <h4 style="margin-bottom:10px;">➕ Agregar Método de Pago</h4>
-        <div class="input-inline">
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-nuevo-metodo-pago', this)">
+          ➕ Agregar Método de Pago <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-nuevo-metodo-pago" class="input-inline" style="display:none;">
           <input type="text"   id="desc-name"  placeholder="Ej: Tarjeta de Crédito">
           <input type="number" id="desc-value" placeholder="Descuento %" min="0" max="100" step="0.1">
           <button class="action-btn" onclick="addDiscountRule()">
@@ -545,8 +561,10 @@
 
       <!-- Configuración IVA (solo admin) -->
       <div class="admin-only" style="margin-top:25px;">
-        <h4 style="margin-bottom:10px;">🧾 Configuración de IVA</h4>
-        <div class="input-inline">
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-config-iva', this)">
+          🧾 Configuración de IVA <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-config-iva" class="input-inline" style="display:none;">
           <input type="number" id="iva-config-input" placeholder="IVA %" min="0" max="100" step="0.1"
             onchange="updateIVAConfig(this.value)">
         </div>
@@ -564,8 +582,10 @@
     </div>
     <div class="popup-body">
       <div class="admin-only" style="margin-bottom:20px;">
-        <h4 style="margin-bottom:10px;">➕ Nueva Promoción "Llevá X, Pagá Y"</h4>
-        <div class="input-inline">
+        <h4 style="margin-bottom:10px; cursor:pointer;" onclick="toggleForm('form-nueva-promocion', this)">
+          ➕ Nueva Promoción "Llevá X, Pagá Y" <i class="ri-arrow-down-s-line" style="transition: transform 0.3s; display: inline-block;"></i>
+        </h4>
+        <div id="form-nueva-promocion" class="input-inline" style="display:none;">
           <input type="text"   id="promo-code" placeholder="Código de producto">
           <input type="number" id="promo-take" placeholder="Llevá (ej: 3)" min="2">
           <input type="number" id="promo-pay"  placeholder="Pagá (ej: 2)" min="1">
@@ -691,8 +711,6 @@
   <script src="js/auth.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/cart.js"></script>
-  <script src="js/products.js"></script>
-  <script src="js/transactions.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/app.js"></script>
   <script src="js/sucursal-guard.js"></script>

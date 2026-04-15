@@ -58,7 +58,7 @@ async function initApp() {
   }
 
   // Verificar sesión guardada (función definida en auth.js)
-  const sessionOk = checkSession();
+  const sessionOk = await checkSession();
 
   if (sessionOk) {
     // Hay sesión activa — cargar datos y abrir la app
