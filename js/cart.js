@@ -176,7 +176,10 @@ async function confirmPayment() {
 
   // 1. Crear venta en Supabase
   const { data: venta, error: vError } = await dbCreateSale(tkCode, total, method);
-  if (vError) { alert('Error al registrar venta: ' + vError.message); return; }
+  if (vError || !venta || !venta.length) { 
+    alert('Error al registrar venta. Verifique conexión.'); 
+    return; 
+  }
 
   const ventaId = venta[0].id;
 

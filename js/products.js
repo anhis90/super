@@ -152,6 +152,7 @@
   function generateProductPhoto(label, size = 400) {
     const name = (label || '').toLowerCase();
     
+    const library = [
       { keywords: ['yerba', 'mate', 'yerba mate'], url: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=400' },
       { keywords: ['leche', 'milk', 'lacteo'], url: 'https://images.unsplash.com/photo-1550583724-125581828cd1?w=400' },
       { keywords: ['azucar', 'sugar'], url: 'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=400' },

@@ -188,19 +188,14 @@ async function dbRegisterCashMovement(type, amount, reason) {
 }
 
 async function dbSetOpeningCash(value) {
-  const { error } = await sb.from('configuracion').upsert(
-    { key: 'opening_cash', value: value.toString(), sucursal_id: currentSucursal.id },
-    { onConflict: 'key,sucursal_id' }
-  );
-    const _s = _getCurrentSucursalSafe();
-    if(!_s){
-      console.warn('dbSetOpeningCash blocked: no active sucursal');
-      if(typeof reportMissingSucursal === 'function') reportMissingSucursal('dbSetOpeningCash');
-      // show configuration popup if available
-      try{ if(typeof openPopup === 'function') openPopup('sucursal'); }catch(e){}
-      return { error: 'no_sucursal' };
-    }
-  return error;
+    const s = _getCurrentSucursalSafe();
+    if(!s) return { error: 'No hay sucursal activa' };
+    
+    const { error } = await sb.from('configuracion').upsert(
+        { key: 'opening_cash', value: value.toString(), sucursal_id: s.id },
+        { onConflict: 'key,sucursal_id' }
+    );
+    return error;
 }
 
 // ─────────────────────────────────────────────
