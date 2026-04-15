@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <div class="login-form" role="region" aria-label="Formulario de acceso">
+      <form class="login-form" role="region" aria-label="Formulario de acceso" onsubmit="event.preventDefault(); window.handleLogin();">
         <div class="form-head">
           <h2>Iniciar sesión</h2>
         </div>
@@ -85,17 +85,17 @@
           <label for="login-pass">Contraseña</label>
           <div class="password-row">
             <input class="form-input" type="password" id="login-pass" placeholder="••••" autocomplete="current-password">
-            <button id="pwd-toggle" class="pwd-toggle" aria-label="Mostrar contraseña">👁️</button>
+            <button type="button" id="pwd-toggle" class="pwd-toggle" aria-label="Mostrar contraseña">👁️</button>
           </div>
         </div>
 
         <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
-          <button id="btn-login" class="btn-primary" disabled>Ingresar al sistema</button>
+          <button type="submit" id="btn-login" class="btn-primary" disabled>Ingresar al sistema</button>
           <div id="loading-spinner" style="display:none;">⏳</div>
         </div>
 
         <p style="margin-top:12px; color:#6b7280; font-size:13px;">Usuario demo: <strong>admin</strong> / <strong>cajero</strong>  ·  Contraseña: <strong>1234</strong></p>
-      </div>
+      </form>
     </div>
   </div>
 
