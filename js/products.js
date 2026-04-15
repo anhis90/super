@@ -128,8 +128,14 @@
     const products = loadProducts();
     // Evitar duplicados por código: si existe, actualizar
     const existingIndex = products.findIndex(p => p.code === code);
-    const productObj = { code, name, price, stock, image: finalImg || '' };
-    if (existingIndex >= 0) products[existingIndex] = productObj; else products.push(productObj);
+    const productObj = { id: Date.now(), code, name, price, stock, image: finalImg || '' };
+    if (existingIndex >= 0) {
+      // Si existe, mantenemos el ID original si lo tiene
+      productObj.id = products[existingIndex].id || productObj.id;
+      products[existingIndex] = productObj;
+    } else {
+      products.push(productObj);
+    }
 
     saveProducts(products);
     renderProductTable();
