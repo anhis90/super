@@ -118,10 +118,20 @@ function calculateItemPromoDiscount(item) {
   return totalFreeItems * item.price;
 }
 
+// Variable global para exportar al ticket el detalle exacto de la última corrida
+window.currentCheckoutValues = {
+  subtotalBruto: 0,
+  promoDiscount: 0,
+  subtotalNeto: 0,
+  globalDiscountAmount: 0,
+  taxAmount: 0,
+  total: 0
+};
+
 /**
  * calculateTotals(subtotalBruto)
  * Calcula descuentos por promociones y método de pago, más IVA.
- * Actualiza los spans del resumen en pantalla.
+ * Actualiza los spans del resumen en pantalla y el state window.currentCheckoutValues.
  */
 function calculateTotals(subtotalBruto) {
   let promoDiscount = 0;
@@ -141,8 +151,17 @@ function calculateTotals(subtotalBruto) {
   const taxAmount  = taxableAmount * (ivaConfig / 100);
   const total      = taxableAmount + taxAmount;
 
+  // Guardar cálculo para ser emitido en el ticket
+  window.currentCheckoutValues = {
+    subtotalBruto,
+    promoDiscount,
+    subtotalNeto,
+    globalDiscountAmount,
+    taxAmount,
+    total
+  };
+
   // Actualizar UI General
-  // Mantendremos el subtotal visual como el puro, pero mostrando los descuentos luego.
   document.getElementById('subtotal').textContent   = `$${subtotalBruto.toFixed(2)}`;
   document.getElementById('iva-amount').textContent = `$${taxAmount.toFixed(2)}`;
   document.getElementById('total').textContent      = `$${total.toFixed(2)}`;
@@ -151,14 +170,21 @@ function calculateTotals(subtotalBruto) {
   const ivaLabel = document.getElementById('iva-label');
   if (ivaLabel) ivaLabel.textContent = ivaConfig;
 
-  // Actualizar fila de descuentos mostrando tanto promos como descuentos globales
+  // Actualizar fila exclusiva de Promociones
+  const promoRow = document.getElementById('promo-row');
+  if (promoDiscount > 0) {
+    promoRow.style.display = 'flex';
+    document.getElementById('promo-amount').textContent = `-$${promoDiscount.toFixed(2)}`;
+  } else {
+    promoRow.style.display = 'none';
+  }
+
+  // Actualizar fila exclusiva de Medio de Pago
   const discRow = document.getElementById('discount-row');
-  const totalDiscounts = promoDiscount + globalDiscountAmount;
-  
-  if (totalDiscounts > 0) {
+  if (globalDiscountAmount > 0) {
     discRow.style.display = 'flex';
-    document.getElementById('discount-percent').textContent = rule.discount + '% + Promos';
-    document.getElementById('discount-amount').textContent  = `-$${totalDiscounts.toFixed(2)}`;
+    document.getElementById('discount-percent').textContent = rule.discount;
+    document.getElementById('discount-amount').textContent  = `-$${globalDiscountAmount.toFixed(2)}`;
   } else {
     discRow.style.display = 'none';
   }
@@ -215,11 +241,13 @@ async function confirmPayment() {
     }
   }
 
-  // 4. Preparar datos del ticket antes de limpiar el carrito
+  // 4. Preparar datos del ticket antes de limpiar el carrito y perder el State local
   const tx = {
     code:   tkCode,
     date:   new Date().toLocaleString('es-AR'),
     method: method,
+    // Importes desglozados:
+    breakdown: { ...window.currentCheckoutValues },
     total:  total,
     items:  [...cart]
   };

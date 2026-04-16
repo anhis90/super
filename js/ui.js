@@ -455,6 +455,45 @@ function showReceipt(tx) {
     </div>
   `).join('');
 
+  // Generar bloque extra si el ticket trae su desglose
+  let breakdownHtml = '';
+  if (tx.breakdown) {
+    const bd = tx.breakdown;
+    
+    let promosHtml = '';
+    if (bd.promoDiscount > 0) {
+      promosHtml = `
+      <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--success); margin-bottom:4px;">
+        <span>Promociones aplicadas:</span>
+        <span>-$${bd.promoDiscount.toFixed(2)}</span>
+      </div>`;
+    }
+
+    let globalDescHtml = '';
+    if (bd.globalDiscountAmount > 0) {
+      globalDescHtml = `
+      <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--success); margin-bottom:4px;">
+        <span>Desc. medio de pago:</span>
+        <span>-$${bd.globalDiscountAmount.toFixed(2)}</span>
+      </div>`;
+    }
+    
+    breakdownHtml = `
+      <div style="border-top:1px dashed var(--glass-border); padding-top:10px; margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <span>Subtotal bruto:</span>
+          <span>$${bd.subtotalBruto.toFixed(2)}</span>
+        </div>
+        ${promosHtml}
+        ${globalDescHtml}
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <span>IVA (${(window.ivaConfig || 21)}%):</span>
+          <span>$${bd.taxAmount.toFixed(2)}</span>
+        </div>
+      </div>
+    `;
+  }
+
   rec.innerHTML = `
     <div style="text-align:center; margin-bottom:20px;">
       <h2 style="margin:0; color:var(--primary);">Super POS Pro</h2>
@@ -466,9 +505,10 @@ function showReceipt(tx) {
         <span>${tx.date}</span>
       </div>
       ${itemsHtml}
+      ${breakdownHtml}
     </div>
     <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:800; margin-bottom:5px;">
-      <span>TOTAL</span>
+      <span>TOTAL FINAL</span>
       <span>$${parseFloat(tx.total).toFixed(2)}</span>
     </div>
     <p style="text-align:right; font-size:12px; color:var(--primary); margin:0;">Medio: ${tx.method}</p>
