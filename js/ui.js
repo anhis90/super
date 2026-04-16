@@ -93,10 +93,22 @@ function renderCart() {
   const container = document.getElementById('cart-items');
   if (!container) return;
   container.innerHTML = '';
-  let subtotal = 0;
+  // Subtotal base absoluto de todos los items
+  let subtotalBruto = 0;
 
   cart.forEach((item, idx) => {
-    subtotal += item.price * item.qty;
+    subtotalBruto += item.price * item.qty;
+    
+    // Obtener ahorro solo para mostrar chiche visual
+    let itemSavings = 0;
+    if (typeof calculateItemPromoDiscount === 'function') {
+      itemSavings = calculateItemPromoDiscount(item);
+    }
+    
+    const promoHtml = itemSavings > 0 
+      ? `<div style="font-size:11px; font-weight:700; color:var(--success); background:rgba(34,197,94,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">Promo Aplicada (-$${itemSavings.toFixed(2)})</div>` 
+      : '';
+
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
@@ -106,6 +118,7 @@ function renderCart() {
         <div class="item-info">
           <span class="item-name" style="display:block; font-size:15px;">${item.name}</span>
           <span class="item-price" style="color:var(--primary); font-weight:600;">$${parseFloat(item.price).toFixed(2)}</span>
+          ${promoHtml}
         </div>
       </div>
       <div class="item-actions" style="display:flex; align-items:center; gap:8px;">
@@ -117,7 +130,8 @@ function renderCart() {
     container.appendChild(div);
   });
 
-  calculateTotals(subtotal);
+  // CalculateTotals ahora recibe el bruto y hace las restas internas usando exactamente los mismos parámetros
+  calculateTotals(subtotalBruto);
 }
 
 // ─────────────────────────────────────────────

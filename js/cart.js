@@ -103,42 +103,62 @@ function showPreview(p) {
 }
 
 /**
- * calculateTotals(subtotal)
+ * calculateItemPromoDiscount(item)
+ * Calcula el ahorro por promociones "Llevá X, Pagá Y" para un ítem específico.
+ */
+function calculateItemPromoDiscount(item) {
+  // Convertimos ambos codes a string para evitar fallos de matching (Ej: '001' vs 1)
+  const promo = promos.find(p => String(p.code) === String(item.code));
+  if (!promo || item.qty < promo.take) return 0;
+  
+  const groups = Math.floor(item.qty / promo.take);
+  const freeItemsPerGroup = promo.take - promo.pay;
+  const totalFreeItems = groups * freeItemsPerGroup;
+  
+  return totalFreeItems * item.price;
+}
+
+/**
+ * calculateTotals(subtotalBruto)
  * Calcula descuentos por promociones y método de pago, más IVA.
  * Actualiza los spans del resumen en pantalla.
  */
-function calculateTotals(subtotal) {
-  // Descuento por promociones "Llevá X, Pagá Y"
+function calculateTotals(subtotalBruto) {
   let promoDiscount = 0;
+  
   cart.forEach(item => {
-    const promo = promos.find(p => p.code === item.code);
-    if (promo && item.qty >= promo.take) {
-      const groups      = Math.floor(item.qty / promo.take);
-      const freePerGroup = promo.take - promo.pay;
-      promoDiscount += groups * freePerGroup * item.price;
-    }
+    promoDiscount += calculateItemPromoDiscount(item);
   });
 
-  // Descuento por método de pago seleccionado
-  const pmId  = document.getElementById('payment-method').value;
-  const rule  = paymentRules.find(r => r.id === pmId) || { discount: 0 };
-  const discAmount = (subtotal - promoDiscount) * (rule.discount / 100) + promoDiscount;
-  const taxAmount  = (subtotal - discAmount) * (ivaConfig / 100);
-  const total      = subtotal - discAmount + taxAmount;
+  const subtotalNeto = subtotalBruto - promoDiscount;
 
-  // Actualizar UI
-  document.getElementById('subtotal').textContent   = `$${subtotal.toFixed(2)}`;
+  // Descuento por método de pago seleccionado (Se calcula sobre el subtotal con promo ya aplicada)
+  const pmId  = document.getElementById('payment-method').value;
+  const rule  = paymentRules.find(r => String(r.id) === String(pmId)) || { discount: 0 };
+  
+  const globalDiscountAmount = subtotalNeto * (rule.discount / 100);
+  const taxableAmount = subtotalNeto - globalDiscountAmount;
+  const taxAmount  = taxableAmount * (ivaConfig / 100);
+  const total      = taxableAmount + taxAmount;
+
+  // Actualizar UI General
+  // Mantendremos el subtotal visual como el puro, pero mostrando los descuentos luego.
+  document.getElementById('subtotal').textContent   = `$${subtotalBruto.toFixed(2)}`;
   document.getElementById('iva-amount').textContent = `$${taxAmount.toFixed(2)}`;
   document.getElementById('total').textContent      = `$${total.toFixed(2)}`;
+  
   // Mostrar porcentaje de IVA actual
   const ivaLabel = document.getElementById('iva-label');
   if (ivaLabel) ivaLabel.textContent = ivaConfig;
 
+  // Actualizar fila de descuentos mostrando tanto promos como descuentos globales
   const discRow = document.getElementById('discount-row');
-  if (discAmount > 0) {
+  const totalDiscounts = promoDiscount + globalDiscountAmount;
+  
+  if (totalDiscounts > 0) {
     discRow.style.display = 'flex';
-    document.getElementById('discount-percent').textContent = rule.discount;
-    document.getElementById('discount-amount').textContent  = `-$${discAmount.toFixed(2)}`;
+    document.getElementById('discount-percent').textContent = rule.discount + '% + Promos';
+    document.getElementById('discount-amount').textContent  = `-$${totalDiscounts.toFixed(2)}`;
   } else {
     discRow.style.display = 'none';
   }
