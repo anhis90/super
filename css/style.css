@@ -404,6 +404,33 @@ header h1 {
   animation: popupReveal 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* 
+ * TICKET / RECEIPT SPECIFIC OVERRIDES 
+ * Forzar legibilidad absoluta estilo papel, matando cualquier herencia de blur/glassmorphism
+ */
+#popup-receipt {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #ccc !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.6) !important;
+  color: #111 !important;
+}
+
+#popup-receipt .popup-header h2 {
+  color: #111 !important;
+}
+
+/* Modificamos el scrollbar interno del ticket para que no use variables que quedan invisibles */
+#receipt-summary::-webkit-scrollbar {
+  width: 6px;
+}
+#receipt-summary::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
 .popup-header {
   display: flex;
   justify-content: space-between;
