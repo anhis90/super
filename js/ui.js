@@ -463,7 +463,7 @@ function showReceipt(tx) {
     let promosHtml = '';
     if (bd.promoDiscount > 0) {
       promosHtml = `
-      <div style="display:flex; justify-content:space-between; font-size:13px; color:#d97706; margin-bottom:4px; font-weight:600;">
+      <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--success); margin-bottom:4px;">
         <span>Promociones aplicadas:</span>
         <span>-$${bd.promoDiscount.toFixed(2)}</span>
       </div>`;
@@ -472,21 +472,21 @@ function showReceipt(tx) {
     let globalDescHtml = '';
     if (bd.globalDiscountAmount > 0) {
       globalDescHtml = `
-      <div style="display:flex; justify-content:space-between; font-size:13px; color:#16a34a; margin-bottom:4px; font-weight:600;">
+      <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--success); margin-bottom:4px;">
         <span>Desc. medio de pago:</span>
         <span>-$${bd.globalDiscountAmount.toFixed(2)}</span>
       </div>`;
     }
     
     breakdownHtml = `
-      <div style="border-top:1px dashed #ccc; padding-top:10px; margin-top:10px;">
-        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; color:#555;">
+      <div style="border-top:1px dashed var(--glass-border); padding-top:10px; margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
           <span>Subtotal bruto:</span>
           <span>$${bd.subtotalBruto.toFixed(2)}</span>
         </div>
         ${promosHtml}
         ${globalDescHtml}
-        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; color:#555;">
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
           <span>IVA (${(window.ivaConfig || 21)}%):</span>
           <span>$${bd.taxAmount.toFixed(2)}</span>
         </div>
@@ -496,25 +496,22 @@ function showReceipt(tx) {
 
   rec.innerHTML = `
     <div style="text-align:center; margin-bottom:20px;">
-      <h2 style="margin:0; color:#111; font-weight:bold; letter-spacing:1px; text-transform:uppercase;">Super POS Pro</h2>
-      <p style="margin:5px 0; font-size:12px; color:#666; font-family:monospace;">COMPROBANTE DE VENTA</p>
+      <h2 style="margin:0; color:var(--primary);">Super POS Pro</h2>
+      <p style="margin:5px 0; font-size:12px; color:var(--text-muted);">Comprobante de Pago</p>
     </div>
-    <div style="border-top:2px dashed #aaa; border-bottom:2px dashed #aaa; padding:15px 0; margin-bottom:15px; color:#111;">
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:15px; font-family:monospace;">
-        <span>TICKET: <strong>${tx.code}</strong></span>
+    <div style="border-top:1px dashed var(--glass-border); border-bottom:1px dashed var(--glass-border); padding:15px 0; margin-bottom:15px;">
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+        <span>Ticket: <strong>${tx.code}</strong></span>
         <span>${tx.date}</span>
       </div>
       ${itemsHtml}
       ${breakdownHtml}
     </div>
-    <div style="display:flex; justify-content:space-between; font-size:22px; font-weight:900; margin-bottom:10px; color:#000;">
+    <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:800; margin-bottom:5px;">
       <span>TOTAL FINAL</span>
       <span>$${parseFloat(tx.total).toFixed(2)}</span>
     </div>
-    <p style="text-align:right; font-size:13px; color:#444; margin:0; font-weight:bold;">Medio de Pago: <span style="color:#000; text-transform:uppercase;">${tx.method}</span></p>
-    <div style="text-align:center; margin-top:20px; font-size:12px; color:#888;">
-      ¡Gracias por su compra!
-    </div>
+    <p style="text-align:right; font-size:12px; color:var(--primary); margin:0;">Medio: ${tx.method}</p>
   `;
   openPopup('receipt');
 }

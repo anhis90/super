@@ -39,7 +39,16 @@ body.dark {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 
+   * ⚠️ Firefox bug: `transition: all` incluye transformaciones
+   * costosas como backdrop-filter y background, lo que puede
+   * causar párpados visuales o que los popups no se rendericen.
+   * Solución: solo transicionar las propiedades visuales básicas.
+   */
+  transition: background-color 0.3s ease, color 0.3s ease,
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease, box-shadow 0.3s ease,
+              border-color 0.3s ease;
 }
 
 body {
@@ -82,8 +91,11 @@ body {
 .logo span {
   background: var(--primary-gradient);
   -webkit-background-clip: text;
+  -moz-background-clip: text;   /* fallback para versiones antiguas de Firefox */
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  /* Firefox no soporta -webkit-text-fill-color; usamos color:transparent */
+  color: transparent;
 }
 
 .nav-links {
@@ -271,8 +283,10 @@ header h1 {
   font-weight: 900;
   background: var(--success-gradient);
   -webkit-background-clip: text;
+  -moz-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  color: transparent; /* Firefox fallback */
 }
 
 /* Cart Glass Section */
@@ -349,8 +363,10 @@ header h1 {
 .summary-row.total span:last-child {
   background: var(--primary-gradient);
   -webkit-background-clip: text;
+  -moz-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  color: transparent; /* Firefox fallback */
 }
 
 .checkout-btn {
@@ -402,33 +418,6 @@ header h1 {
 .popup.active {
   display: block;
   animation: popupReveal 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-/* 
- * TICKET / RECEIPT SPECIFIC OVERRIDES 
- * Forzar legibilidad absoluta estilo papel, matando cualquier herencia de blur/glassmorphism
- */
-#popup-receipt {
-  background: #ffffff !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: 1px solid #ccc !important;
-  border-radius: 12px !important;
-  box-shadow: 0 25px 80px rgba(0,0,0,0.6) !important;
-  color: #111 !important;
-}
-
-#popup-receipt .popup-header h2 {
-  color: #111 !important;
-}
-
-/* Modificamos el scrollbar interno del ticket para que no use variables que quedan invisibles */
-#receipt-summary::-webkit-scrollbar {
-  width: 6px;
-}
-#receipt-summary::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
 }
 
 .popup-header {
@@ -629,10 +618,13 @@ header h1 {
   border: 1px solid var(--glass-border);
 }
 
-/* Custom Scroll */
+/* Scrollbar — Chromium */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* Scrollbar — Firefox (nativo desde Firefox 64) */
+* { scrollbar-width: thin; scrollbar-color: var(--primary) transparent; }
 
 /* Search dropdown items */
 .search-item {

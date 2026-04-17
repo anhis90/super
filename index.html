@@ -633,33 +633,34 @@
         </div>
       </div>
 
-        <!-- ══════════════════════════════════════════
-             POPUP: CONFIGURAR SUCURSAL (cuando no existe)
-        ══════════════════════════════════════════ -->
-        <div id="popup-sucursal" class="popup" style="max-width:520px;">
-          <div class="popup-header">
-            <h2><i class="ri-store-line"></i> Configurar Sucursal</h2>
-            <button class="close-btn" onclick="closePopups()">✕</button>
-          </div>
-          <div class="popup-body">
-            <p>El sistema no encontró una sucursal activa. Podés crear una sucursal por defecto o completar los datos y guardarla.</p>
-            <div class="form-group">
-              <label>Nombre de la sucursal</label>
-              <input id="sucursal-name" class="form-input" placeholder="Sucursal Principal">
-            </div>
-            <div class="form-group">
-              <label>Dirección / Notas</label>
-              <input id="sucursal-address" class="form-input" placeholder="Dirección, Local, etc.">
-            </div>
-            <div style="display:flex; gap:10px; margin-top:12px;">
-              <button class="action-btn" onclick="createSucursalFromForm(true)">Crear sucursal por defecto</button>
-              <button class="btn-primary" onclick="createSucursalFromForm(false)">Guardar y usar</button>
-            </div>
-          </div>
-        </div>
-
       <h4 style="margin-bottom:10px;">📋 Promociones activas</h4>
       <ul id="promo-list" class="editable-list"></ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       POPUP: CONFIGURAR SUCURSAL
+       Se abre automáticamente si no hay sucursal en Supabase
+  ══════════════════════════════════════════ -->
+  <div id="popup-sucursal" class="popup" style="max-width:520px;">
+    <div class="popup-header">
+      <h2><i class="ri-store-line"></i> Configurar Sucursal</h2>
+      <button class="close-btn" onclick="closePopups()">✕</button>
+    </div>
+    <div class="popup-body">
+      <p style="margin-bottom:16px; color:var(--text-muted);">El sistema no encontró una sucursal activa. Podés crear una por defecto o completar los datos.</p>
+      <div class="form-group">
+        <label>Nombre de la sucursal</label>
+        <input id="sucursal-name" class="form-input" placeholder="Sucursal Principal">
+      </div>
+      <div class="form-group">
+        <label>Dirección / Notas</label>
+        <input id="sucursal-address" class="form-input" placeholder="Dirección, Local, etc.">
+      </div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+        <button class="action-btn" onclick="createSucursalFromForm(true)">Crear por defecto</button>
+        <button class="btn-primary" onclick="createSucursalFromForm(false)">Guardar y usar</button>
+      </div>
     </div>
   </div>
 
@@ -737,41 +738,41 @@
 
 
   <!-- ══════════════════════════════════════════
-       SCRIPTS
-       Orden importa: Supabase CDN → cliente → módulos → app
+       SCRIPTS — Orden de carga (MUY IMPORTANTE)
+
+       Explicación del orden:
+       1. CDN Supabase: crea window.supabase (el SDK)
+       2. supabase-client.js: usa ese SDK para crear window.sb (nuestro cliente)
+       3. db.js: funciones de DB que usan window.sb
+       4. auth.js: login/logout que usan currentUser (global de app.js)
+       5. ui.js: render que usa products, cart, etc. (globales de app.js)
+       6. cart.js: carrito que usa ui.js y db.js
+       7. ai.js: análisis que usa transactions y products
+       8. app.js: declara los globales Y orquesta el arranque
+       9. sucursal-guard.js: wraps de seguridad (carga última)
+
+       ⚠️  Por qué NO usamos `defer` en el CDN de Supabase:
+       Los demás scripts necesitan que window.supabase esté disponible
+       cuando ellos ejecutan. Con el CDN bloqueante + defer en los
+       nuestros, el orden se garantiza.
+
+       ⚠️  Por qué NO ponemos scripts en el <head>:
+       Los scripts necesitan referencias al DOM (getElementById, etc.)
+       que solo existen después de parsear el body.
   ══════════════════════════════════════════ -->
-  <!-- 1. SDK de Supabase (crea window.supabase) -->
+
+  <!-- 1. SDK de Supabase — DEBE estar primero y SIN defer -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- 2. Inicialización del cliente como window.sb -->
-  <script src="supabase-client.js"></script>
-  <!-- 3. Módulos de la app (orden: db → auth → ui → cart → ai → app) -->
-  <script src="js/db.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/cart.js"></script>
-  <script src="js/ai.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/sucursal-guard.js"></script>
-  <!-- Small integration helpers: bind logout and date display if available -->
-  <script>
-    (function(){
-      function safeBind(){
-        var btn = document.getElementById('btn-logout') || document.querySelector('.logout-btn');
-        if(btn && window.handleLogout) btn.addEventListener('click', window.handleLogout);
-        var dateEl = document.getElementById('date-display');
-        if(dateEl){
-          function update(){
-            var d = new Date();
-            dateEl.textContent = d.toLocaleString();
-          }
-          update(); setInterval(update, 60000);
-        }
-        // expose minimal hook to recalc layout if needed
-        window.pos_reflow = function(){ document.documentElement.style.setProperty('--reflow','1'); };
-      }
-      if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', safeBind); else safeBind();
-    })();
-  </script>
+
+  <!-- 2 al 9: nuestros módulos con defer para ejecución segura post-DOM -->
+  <script src="supabase-client.js" defer></script>
+  <script src="js/db.js"           defer></script>
+  <script src="js/auth.js"         defer></script>
+  <script src="js/ui.js"           defer></script>
+  <script src="js/cart.js"         defer></script>
+  <script src="js/ai.js"           defer></script>
+  <script src="js/app.js"          defer></script>
+  <script src="js/sucursal-guard.js" defer></script>
 
 </body>
 </html>
