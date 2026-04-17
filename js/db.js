@@ -1,248 +1,458 @@
-// Safe helper to resolve currentSucursal across modules
-function _getCurrentSucursalSafe(){
-  if (typeof currentSucursal !== 'undefined' && currentSucursal && currentSucursal.id) return currentSucursal;
-  try{ const s = localStorage.getItem('pos_sucursal'); if(s) return JSON.parse(s); }catch(e){}
+// ============================================================
+// js/db.js
+// Capa de Acceso a Datos (Data Access Layer / DAL)
+//
+// REGLA: Este archivo es el ÚNICO que habla con Supabase.
+//        El resto de la app usa estas funciones, no llama
+//        a window.sb directamente.
+//
+// POR QUÉ usamos window.sb en lugar de solo sb:
+//   Con scripts cargados via <script defer>, cada archivo tiene
+//   su propio momento de ejecución. Si usamos solo "sb" (sin
+//   el prefijo "window."), en Firefox o en contextos de
+//   strict mode puede generar "sb is not defined" si el orden
+//   de inicialización no es perfecto.
+//   Usar window.sb hace la referencia explícita y segura.
+// ============================================================
+
+// ─────────────────────────────────────────────
+// Helper privado: obtener la sucursal activa de forma segura
+// Primero intenta la variable global, luego localStorage como fallback
+// ─────────────────────────────────────────────
+function _getSucursal() {
+  if (typeof currentSucursal !== 'undefined' && currentSucursal && currentSucursal.id) {
+    return currentSucursal;
+  }
+  try {
+    var raw = localStorage.getItem('pos_sucursal');
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* ignora */ }
   return null;
 }
 
+// ─────────────────────────────────────────────
+// Helper privado: verificar que window.sb esté disponible
+// Devuelve true si está OK, false si hay problema
+// ─────────────────────────────────────────────
+function _checkSb() {
+  if (!window.sb || typeof window.sb.from !== 'function') {
+    console.error('[DB] window.sb no está inicializado. Verificar supabase-client.js.');
+    return false;
+  }
+  return true;
+}
+
 // ============================================================
-// js/db.js
-// Capa de acceso a datos — TODAS las llamadas a Supabase van aquí
-// Usa window.sb (definido en supabase-client.js)
-// Principio: el resto de la app NO llama a sb directamente
+// CARGA INICIAL
 // ============================================================
 
 /**
- * Carga todos los datos iniciales de la base de datos.
- * Se llama al iniciar la app y luego de cada operación importante.
+ * loadInitialData()
+ * Carga todos los datos necesarios desde Supabase al iniciar la app.
+ * Se vuelve a llamar despues de operaciones importantes para refrescar el estado.
+ *
+ * Retorna: true si cargó bien, false si hubo error.
  */
 async function loadInitialData() {
-  // 1. Sucursal principal (tomamos la primera disponible)
-  const { data: sucursales, error: sucErr } = await sb.from('sucursales').select('*').limit(1);
-  if (sucErr) { console.error('Error cargando sucursal:', sucErr.message); return; }
-  currentSucursal = sucursales[0];
+  if (!_checkSb()) return false;
 
-  if (!currentSucursal) {
-    console.error('No hay sucursales configuradas en la base de datos');
-    return;
+  try {
+    // 1. Sucursal activa
+    var sucResult = await window.sb.from('sucursales').select('*').limit(1);
+    if (sucResult.error) {
+      console.error('[DB] Error cargando sucursal:', sucResult.error.message);
+      return false;
+    }
+
+    // Asignar a la variable global declarada en app.js
+    currentSucursal = (sucResult.data && sucResult.data[0]) ? sucResult.data[0] : null;
+
+    if (!currentSucursal) {
+      console.warn('[DB] No hay sucursales en la base de datos. Usar openPopup("sucursal") para crear una.');
+      return false;
+    }
+
+    var sid = currentSucursal.id;
+
+    // 2. Productos
+    var prodResult = await window.sb.from('productos').select('*').eq('sucursal_id', sid);
+    products = prodResult.data || [];
+
+    // 3. Proveedores
+    var provResult = await window.sb.from('proveedores').select('*').eq('sucursal_id', sid);
+    suppliers = provResult.data || [];
+
+    // 4. Compras con detalle de proveedor
+    var compResult = await window.sb
+      .from('compras')
+      .select('*, proveedores(name), detalle_compras(*)')
+      .eq('sucursal_id', sid);
+
+    purchases = (compResult.data || []).map(function (c) {
+      return {
+        date: new Date(c.date).toLocaleDateString('es-AR'),
+        prov: (c.proveedores && c.proveedores.name) ? c.proveedores.name : 'Sin proveedor',
+        prod: 'Varios',
+        qty:  (c.detalle_compras || []).reduce(function (sum, d) { return sum + d.qty; }, 0),
+        cost: c.total
+      };
+    });
+
+    // 5. Configuración (IVA y apertura de caja)
+    var cfgResult = await window.sb.from('configuracion').select('*').eq('sucursal_id', sid);
+    var cfg = cfgResult.data || [];
+
+    var ivaRow     = cfg.find(function (c) { return c.key === 'iva'; });
+    var cashRow    = cfg.find(function (c) { return c.key === 'opening_cash'; });
+    ivaConfig   = parseFloat((ivaRow   && ivaRow.value)  ? ivaRow.value  : 21);
+    openingCash = parseFloat((cashRow  && cashRow.value)  ? cashRow.value : 0);
+
+    // 6. Métodos de pago / descuentos
+    var pmResult = await window.sb.from('metodos_pago').select('*').eq('sucursal_id', sid);
+    paymentRules = pmResult.data || [];
+
+    // 7. Promociones
+    var promoResult = await window.sb.from('promociones').select('*').eq('sucursal_id', sid);
+    promos = promoResult.data || [];
+
+    // 8. Ventas con detalle de items (para historial y análisis IA)
+    var salesResult = await window.sb
+      .from('ventas')
+      .select('*, detalle_ventas(qty, price, productos(id, name, code))')
+      .eq('sucursal_id', sid)
+      .order('date', { ascending: false });
+
+    transactions = (salesResult.data || []).map(function (s) {
+      return {
+        id:      s.id,
+        code:    s.code,
+        dateRaw: new Date(s.date),
+        date:    new Date(s.date).toLocaleString('es-AR'),
+        method:  s.method,
+        total:   s.total,
+        items:   (s.detalle_ventas || []).map(function (d) {
+          return {
+            productName: (d.productos && d.productos.name) ? d.productos.name : 'Producto',
+            productCode: (d.productos && d.productos.code) ? d.productos.code : '',
+            qty:   d.qty,
+            price: d.price
+          };
+        })
+      };
+    });
+
+    console.log('[DB] Datos cargados: ' + products.length + ' productos, ' + transactions.length + ' ventas.');
+    return true;
+
+  } catch (e) {
+    console.error('[DB] Error inesperado en loadInitialData:', e);
+    return false;
   }
-
-  const sid = currentSucursal.id;
-
-  // 2. Productos
-  const { data: prodData } = await sb.from('productos').select('*').eq('sucursal_id', sid);
-  products = prodData || [];
-
-  // 3. Proveedores
-  const { data: provData } = await sb.from('proveedores').select('*').eq('sucursal_id', sid);
-  suppliers = provData || [];
-
-  // 4. Compras (con detalle y nombre de proveedor)
-  const { data: compData } = await sb
-    .from('compras')
-    .select('*, proveedores(name), detalle_compras(*)')
-    .eq('sucursal_id', sid);
-
-  purchases = (compData || []).map(c => ({
-    date: new Date(c.date).toLocaleDateString('es-AR'),
-    prov: c.proveedores?.name || 'Sin proveedor',
-    prod: 'Varios',
-    qty:  c.detalle_compras?.reduce((sum, d) => sum + d.qty, 0) || 0,
-    cost: c.total
-  }));
-
-  // 5. Configuración (IVA y caja de apertura)
-  const { data: configData } = await sb.from('configuracion').select('*').eq('sucursal_id', sid);
-  ivaConfig    = parseFloat(configData?.find(c => c.key === 'iva')?.value          || 21);
-  openingCash  = parseFloat(configData?.find(c => c.key === 'opening_cash')?.value || 0);
-
-  // 6. Métodos de pago / descuentos
-  const { data: pmData } = await sb.from('metodos_pago').select('*').eq('sucursal_id', sid);
-  paymentRules = pmData || [];
-
-  // 7. Promociones
-  const { data: promoData } = await sb.from('promociones').select('*').eq('sucursal_id', sid);
-  promos = promoData || [];
-
-  // 8. Ventas (con detalle e items — incluimos code para el módulo de IA)
-  const { data: salesData } = await sb
-    .from('ventas')
-    .select('*, detalle_ventas(qty, price, productos(id, name, code))')
-    .eq('sucursal_id', sid)
-    .order('date', { ascending: false });
-
-  transactions = (salesData || []).map(s => ({
-    code:    s.code,
-    dateRaw: new Date(s.date),                          // Fecha como objeto Date (lo usa la IA)
-    date:    new Date(s.date).toLocaleString('es-AR'),  // Fecha formateada (la usa la UI)
-    method:  s.method,
-    total:   s.total,
-    items:   (s.detalle_ventas || []).map(d => ({
-      productName: d.productos?.name || 'Producto',   // Nombre (para mostrar)
-      productCode: d.productos?.code || '',           // Código (para matching en IA)
-      qty:         d.qty,
-      price:       d.price
-    }))
-  }));
 }
 
-// ─────────────────────────────────────────────
+// ============================================================
 // PRODUCTOS
-// ─────────────────────────────────────────────
+// ============================================================
 
+/**
+ * dbAddProduct(code, name, price, stock, image)
+ * Inserta un producto nuevo en la sucursal activa.
+ * Retorna: error (null si OK)
+ */
 async function dbAddProduct(code, name, price, stock, image) {
-  const { error } = await sb.from('productos').insert([{
-    code, name, price, stock,
-    image: image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80',
-    sucursal_id: currentSucursal.id
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
+
+  var result = await window.sb.from('productos').insert([{
+    code:        code,
+    name:        name,
+    price:       price,
+    stock:       stock,
+    image:       image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80',
+    sucursal_id: s.id
   }]);
-  return error;
+  return result.error;
 }
 
+/**
+ * dbDeleteProduct(productId)
+ * Elimina un producto por su ID (UUID de Supabase).
+ * Retorna: error (null si OK)
+ */
 async function dbDeleteProduct(productId) {
-  const { error } = await sb.from('productos').delete().eq('id', productId);
-  return error;
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var result = await window.sb.from('productos').delete().eq('id', productId);
+  return result.error;
 }
 
+/**
+ * dbUpdateStock(productId, newStock)
+ * Actualiza el stock de un producto.
+ * Retorna: error (null si OK)
+ */
 async function dbUpdateStock(productId, newStock) {
-  const { error } = await sb.from('productos').update({ stock: newStock }).eq('id', productId);
-  return error;
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var result = await window.sb.from('productos').update({ stock: newStock }).eq('id', productId);
+  return result.error;
 }
 
-// ─────────────────────────────────────────────
+// ============================================================
 // VENTAS
-// ─────────────────────────────────────────────
+// ============================================================
 
+/**
+ * dbCreateSale(code, total, method)
+ * Registra una venta nueva.
+ * Retorna: { data, error }
+ */
 async function dbCreateSale(code, total, method) {
-  const { data, error } = await sb.from('ventas').insert([{
-    code,
-    total,
-    method,
-    // user_id: null — ya no usamos auth, ponemos null
-    sucursal_id: currentSucursal.id
+  if (!_checkSb()) return { data: null, error: { message: 'Supabase no disponible' } };
+  var s = _getSucursal();
+  if (!s) return { data: null, error: { message: 'Sin sucursal activa' } };
+
+  var result = await window.sb.from('ventas').insert([{
+    code:        code,
+    total:       total,
+    method:      method,
+    sucursal_id: s.id
+    // user_id: null — sin auth de Supabase, dejamos null
   }]).select();
-  return { data, error };
+  return { data: result.data, error: result.error };
 }
 
+/**
+ * dbCreateSaleDetails(ventaId, cartItems)
+ * Inserta los items de una venta.
+ * Retorna: error (null si OK)
+ */
 async function dbCreateSaleDetails(ventaId, cartItems) {
-  const detalles = cartItems.map(item => ({
-    venta_id:   ventaId,
-    product_id: item.id,
-    qty:        item.qty,
-    price:      item.price
-  }));
-  const { error } = await sb.from('detalle_ventas').insert(detalles);
-  return error;
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+
+  var detalles = cartItems.map(function (item) {
+    return {
+      venta_id:   ventaId,
+      product_id: item.id,
+      qty:        item.qty,
+      price:      item.price
+    };
+  });
+
+  var result = await window.sb.from('detalle_ventas').insert(detalles);
+  return result.error;
 }
 
+/**
+ * dbClearSales()
+ * Borra TODAS las ventas de la sucursal (acción irreversible).
+ * Retorna: error (null si OK)
+ */
 async function dbClearSales() {
-  const { error } = await sb.from('ventas').delete().eq('sucursal_id', currentSucursal.id);
-  return error;
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
+
+  var result = await window.sb.from('ventas').delete().eq('sucursal_id', s.id);
+  return result.error;
 }
 
+/**
+ * dbVoidSale(ventaId)
+ * Anula (borra) una venta específica por ID.
+ * Retorna: error (null si OK)
+ */
 async function dbVoidSale(ventaId) {
-  const { error } = await sb.from('ventas').delete().eq('id', ventaId);
-  return error;
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var result = await window.sb.from('ventas').delete().eq('id', ventaId);
+  return result.error;
 }
 
-// ─────────────────────────────────────────────
+// ============================================================
 // PROVEEDORES
-// ─────────────────────────────────────────────
+// ============================================================
 
+/**
+ * dbAddSupplier(name, contact)
+ * Agrega un proveedor a la sucursal activa.
+ * Retorna: error (null si OK)
+ */
 async function dbAddSupplier(name, contact) {
-  const { error } = await sb.from('proveedores').insert([{
-    name, contact, sucursal_id: currentSucursal.id
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
+
+  var result = await window.sb.from('proveedores').insert([{
+    name:        name,
+    contact:     contact,
+    sucursal_id: s.id
   }]);
-  return error;
+  return result.error;
 }
 
-// ─────────────────────────────────────────────
-// COMPRAS
-// ─────────────────────────────────────────────
+// ============================================================
+// COMPRAS / INGRESO DE STOCK
+// ============================================================
 
+/**
+ * dbCreatePurchase(supplierId, total)
+ * Registra una compra (cabecera).
+ * Retorna: { data, error }
+ */
 async function dbCreatePurchase(supplierId, total) {
-  const { data, error } = await sb.from('compras').insert([{
+  if (!_checkSb()) return { data: null, error: { message: 'Supabase no disponible' } };
+  var s = _getSucursal();
+  if (!s) return { data: null, error: { message: 'Sin sucursal activa' } };
+
+  var result = await window.sb.from('compras').insert([{
     supplier_id: supplierId,
-    total,
-    sucursal_id: currentSucursal.id
+    total:       total,
+    sucursal_id: s.id
   }]).select();
-  return { data, error };
+  return { data: result.data, error: result.error };
 }
 
+/**
+ * dbCreatePurchaseDetail(compraId, productId, qty, cost)
+ * Registra el detalle de una compra.
+ * Retorna: error (null si OK)
+ */
 async function dbCreatePurchaseDetail(compraId, productId, qty, cost) {
-  const { error } = await sb.from('detalle_compras').insert([{
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+
+  var result = await window.sb.from('detalle_compras').insert([{
     compra_id:  compraId,
     product_id: productId,
-    qty,
-    cost
+    qty:        qty,
+    cost:       cost
   }]);
-  return error;
+  return result.error;
 }
 
-// ─────────────────────────────────────────────
+// ============================================================
 // CAJA
-// ─────────────────────────────────────────────
+// ============================================================
 
+/**
+ * dbRegisterCashMovement(type, amount, reason)
+ * Registra un movimiento de caja (ingreso o egreso).
+ * Retorna: error (null si OK)
+ */
 async function dbRegisterCashMovement(type, amount, reason) {
-  const { error } = await sb.from('caja_movimientos').insert([{
-    type, amount, reason,
-    user_id: null, // sin auth
-    sucursal_id: currentSucursal.id
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
+
+  var result = await window.sb.from('caja_movimientos').insert([{
+    type:        type,
+    amount:      amount,
+    reason:      reason,
+    user_id:     null, // sin auth de Supabase
+    sucursal_id: s.id
   }]);
-  return error;
+  return result.error;
 }
 
+/**
+ * dbSetOpeningCash(value)
+ * Guarda o actualiza el monto de apertura de caja en configuracion.
+ * Retorna: error (null si OK)
+ */
 async function dbSetOpeningCash(value) {
-    const s = _getCurrentSucursalSafe();
-    if(!s) return { error: 'No hay sucursal activa' };
-    
-    const { error } = await sb.from('configuracion').upsert(
-        { key: 'opening_cash', value: value.toString(), sucursal_id: s.id },
-        { onConflict: 'key,sucursal_id' }
-    );
-    return error;
-}
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
 
-// ─────────────────────────────────────────────
-// CONFIGURACIÓN (IVA)
-// ─────────────────────────────────────────────
-
-async function dbUpdateIva(value) {
-  const { error } = await sb.from('configuracion').upsert(
-    { key: 'iva', value: value.toString(), sucursal_id: currentSucursal.id },
+  var result = await window.sb.from('configuracion').upsert(
+    { key: 'opening_cash', value: value.toString(), sucursal_id: s.id },
     { onConflict: 'key,sucursal_id' }
   );
-  return error;
+  return result.error;
 }
 
-// ─────────────────────────────────────────────
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+
+/**
+ * dbUpdateIva(value)
+ * Actualiza el porcentaje de IVA en la configuración.
+ * Retorna: error (null si OK)
+ */
+async function dbUpdateIva(value) {
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
+
+  var result = await window.sb.from('configuracion').upsert(
+    { key: 'iva', value: value.toString(), sucursal_id: s.id },
+    { onConflict: 'key,sucursal_id' }
+  );
+  return result.error;
+}
+
+// ============================================================
 // MÉTODOS DE PAGO / DESCUENTOS
-// ─────────────────────────────────────────────
+// ============================================================
 
+/**
+ * dbAddPaymentMethod(name, discount)
+ * Agrega un método de pago con su descuento porcentual.
+ * Retorna: error (null si OK)
+ */
 async function dbAddPaymentMethod(name, discount) {
-  const { error } = await sb.from('metodos_pago').insert([{
-    name, discount, sucursal_id: currentSucursal.id
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
+
+  var result = await window.sb.from('metodos_pago').insert([{
+    name:        name,
+    discount:    discount,
+    sucursal_id: s.id
   }]);
-  return error;
+  return result.error;
 }
 
+/**
+ * dbDeletePaymentMethod(id)
+ * Elimina un método de pago por ID.
+ * Retorna: error (null si OK)
+ */
 async function dbDeletePaymentMethod(id) {
-  const { error } = await sb.from('metodos_pago').delete().eq('id', id);
-  return error;
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var result = await window.sb.from('metodos_pago').delete().eq('id', id);
+  return result.error;
 }
 
-// ─────────────────────────────────────────────
+// ============================================================
 // PROMOCIONES
-// ─────────────────────────────────────────────
+// ============================================================
 
+/**
+ * dbAddPromotion(code, take, pay)
+ * Agrega una promoción "Llevá X, Pagá Y".
+ * Retorna: error (null si OK)
+ */
 async function dbAddPromotion(code, take, pay) {
-  const { error } = await sb.from('promociones').insert([{
-    code, take, pay, sucursal_id: currentSucursal.id
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var s = _getSucursal();
+  if (!s) return { message: 'Sin sucursal activa' };
+
+  var result = await window.sb.from('promociones').insert([{
+    code:        code,
+    take:        take,
+    pay:         pay,
+    sucursal_id: s.id
   }]);
-  return error;
+  return result.error;
 }
 
+/**
+ * dbDeletePromotion(id)
+ * Elimina una promoción por ID.
+ * Retorna: error (null si OK)
+ */
 async function dbDeletePromotion(id) {
-  const { error } = await sb.from('promociones').delete().eq('id', id);
-  return error;
+  if (!_checkSb()) return { message: 'Supabase no disponible' };
+  var result = await window.sb.from('promociones').delete().eq('id', id);
+  return result.error;
 }

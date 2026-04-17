@@ -13,16 +13,20 @@
 // ============================================================
 
 // ─────────────────────────────────────────────
-// ⚙️ CONFIGURACIÓN DE REGLAS
-// Modificá estos valores para ajustar qué tan estricta es la "IA"
+// ⚙️ CONFIGURACIÓN DE REGLAS DE IA
+//
+// ⚠️ FIREFOX: `const` en scope global puede causar
+//    "redeclaration of non-configurable global property"
+//    Solución: usamos `var` con Object.freeze() para
+//    mantener la inmutabilidad sin conflictos en FF.
 // ─────────────────────────────────────────────
-const AI_CONFIG = {
+var AI_CONFIG = Object.freeze({
   STOCK_MINIMO:          5,   // Alertar cuando quede este valor o menos
   DIAS_ANALISIS:         7,   // Ventana de tiempo para rotación (7 días)
-  VENTAS_ALTA_ROTACION:  3,   // Cantidad mínima vendida para considerar "alta rotación"
+  VENTAS_ALTA_ROTACION:  3,   // Cantidad mínima vendida para "alta rotación"
   DIAS_SIN_MOVIMIENTO:   30,  // Avisar si no se vendió nada en un mes
-  FACTOR_REPOSICION:     2.0, // Cantidad a comprar = ventas recientes * factor
-};
+  FACTOR_REPOSICION:     2.0  // Cantidad a comprar = ventas recientes * factor
+});
 
 /**
  * analyzeBusinessData()
