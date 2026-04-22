@@ -21,23 +21,8 @@
   <!-- Favicon inline: evita petición 404 a /favicon.ico en GitHub Pages -->
   <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23007acc'/><text x='50' y='58' font-size='50' text-anchor='middle' fill='white' font-family='Arial'>SP</text></svg>">
 
-  <!--
-    SDK Supabase — cargado en <head> SIN defer.
+  <!-- SDK Supabase se carga dinámicamente en js/supabase.js como módulo ESM -->
 
-    ¿Por qué aquí y no al final del body?
-    Los scripts con `defer` en el body se descargan en paralelo
-    con el resto de la página, pero su EJECUCIÓN se encola para
-    después del DOMContentLoaded. Sin embargo, el orden relativo
-    entre un script bloqueante en el body y scripts defer puede
-    variar entre motores JS (especialmente Firefox vs Chrome).
-
-    Colocarlo en el head SIN defer garantiza que:
-    1. Se descarga y ejecuta sincrónicamente antes de parsear el body.
-    2. window.supabase está disponible cuando cualquier script
-       defer empiece a ejecutarse — sin race conditions.
-    3. Funciona igual en Firefox, Chrome, Safari y Edge.
-  -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* Login redesign styles (scoped) */
     .login-overlay { background: linear-gradient(180deg, rgba(15,23,42,0.65), rgba(6,10,25,0.65)), radial-gradient(600px 400px at 10% 10%, rgba(58,64,151,0.12), transparent); }
@@ -755,51 +740,7 @@
   </div>
 
 
-  <!--
-    MÓDULOS DE LA APLICACIÓN — todos con `defer`
-
-    `defer` garantiza:
-    - El script se descarga en paralelo (no bloquea el render)
-    - Se ejecuta solo DESPUÉS de que el DOM esté completamente
-      parseado (como DOMContentLoaded pero con orden garantizado)
-    - Los scripts defer se ejecutan EN ORDEN, uno tras otro
-
-    Orden de ejecución garantizado:
-    1. supabase-client.js → crea window.sb usando window.supabase (del head)
-    2. db.js              → funciones de datos, usa window.sb
-    3. auth.js            → login local, usa variables globales de app.js
-    4. ui.js              → renderizado, usa products/cart/etc. de app.js
-    5. cart.js            → carrito y checkout, usa ui.js y db.js
-    6. ai.js              → análisis de negocio, usa transactions/products
-    7. app.js             → declara estado global + orquesta el arranque
-    8. sucursal-guard.js  → protecciones de runtime (carga última)
-
-    NOTA: El CDN de Supabase ya está en el <head> (ver arriba),
-    garantizando que window.supabase exista antes de estos scripts.
-  -->
-  <!--
-    Orden exacta de ejecucion (todos con defer = en orden, tras el DOM):
-    1. state.js           declara TODAS las variables globales
-    2. supabase-client.js crea window.sb  (usa window.supabase del head)
-    3. db.js              funciones de datos  (usa window.sb)
-    4. auth.js            login/logout/checkSession
-    5. ui.js              renderizado y navegacion
-    6. cart.js            carrito y checkout
-    7. ai.js              analisis de negocio
-    8. nav.js             submenus del sidebar
-    9. app.js             orquestador: initApp, helpers
-   10. sucursal-guard.js  runtime guards
-  -->
-  <script src="js/state.js"          defer></script>
-  <script src="supabase-client.js"   defer></script>
-  <script src="js/db.js"             defer></script>
-  <script src="js/auth.js"           defer></script>
-  <script src="js/ui.js"             defer></script>
-  <script src="js/cart.js"           defer></script>
-  <script src="js/ai.js"             defer></script>
-  <script src="js/nav.js"            defer></script>
-  <script src="js/app.js"            defer></script>
-  <script src="js/sucursal-guard.js" defer></script>
-
+  <!-- MÓDULO PRINCIPAL — type="module" garantiza scope aislado y orden de carga -->
+  <script src="js/app.js" type="module"></script>
 </body>
 </html>
