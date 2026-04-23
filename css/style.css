@@ -1,38 +1,39 @@
 :root {
-  /* Fintech Glassmorphism Palette */
-  --bg-app: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%);
-  --glass-white: rgba(255, 255, 255, 0.6);
-  --glass-dark: rgba(0, 0, 0, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --blur: blur(16px);
+  /* Premium Fintech Palette - Indigo & Cyan */
+  --bg-app: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  --glass-white: rgba(255, 255, 255, 0.75);
+  --glass-dark: rgba(15, 23, 42, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --blur: blur(20px);
   
-  --primary-gradient: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
-  --secondary-gradient: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
-  --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  --danger-gradient: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+  --secondary-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --success-gradient: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
+  --danger-gradient: linear-gradient(135deg, #f43f5e 0%, #dc2626 100%);
   
-  --primary: #7c3aed;
-  --secondary: #0ea5e9;
+  --primary: #6366f1;
+  --secondary: #06b6d4;
   --success: #10b981;
   --danger: #f43f5e;
   
-  --text-main: #1e1b4b;
+  --text-main: #0f172a;
   --text-muted: #64748b;
-  --radius-lg: 24px;
-  --radius-md: 16px;
-  --shadow-color: rgba(124, 58, 237, 0.15);
-  --shadow-lg: 0 20px 25px -5px var(--shadow-color), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --shadow-color: rgba(99, 102, 241, 0.12);
+  --shadow-lg: 0 20px 25px -5px var(--shadow-color), 0 10px 10px -5px rgba(0,0,0,0.02);
   
   --font-family: 'Inter', sans-serif;
 }
 
 body.dark {
-  --bg-app: linear-gradient(135deg, #0b0e14 0%, #1a1f2e 100%);
-  --glass-white: rgba(25, 30, 45, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --bg-app: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+  --glass-white: rgba(15, 23, 42, 0.85);
+  --glass-dark: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --shadow-color: rgba(0, 0, 0, 0.5);
+  --shadow-color: rgba(0, 0, 0, 0.6);
 }
 
 * {
