@@ -1,0 +1,11 @@
+# Browser/OS junk
+.DS_Store
+Thumbs.db
+
+# Project specific
+node_modules/
+.env
+*.log
+
+# Backup folder (optional, but keep it for now as it contains old code the user might want)
+# backup/

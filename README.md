@@ -1,67 +1,50 @@
-# Super POS - Cambios IA y mejoras locales
+# Super POS Pro - Sistema Modular de Punto de Venta
 
-Resumen de los cambios que implementé en este repositorio (fecha: 13/04/2026):
+Sistema de punto de venta profesional refactorizado con arquitectura modular ESM y sincronización con Supabase.
 
-- Añadido módulo de "IA" local: `js/ai.js`
-  - `analyzeBusinessData()` analiza productos y ventas y genera:
-    - Alertas inteligentes de stock (stock <= configurable)
-    - Top productos (hoy / semana)
-    - Recomendaciones de compra
-    - Detección de productos sin movimiento
-  - Expone `window.analyzeBusinessData()` y `window.ai.hookSaleRecorded(tx)`.
-  - Soporta múltiples orígenes de datos (variables globales, `localStorage`, tablas DOM)
+## Arquitectura Modular
 
-- Persistencia y manejo de productos: `js/products.js`
-  - `addLocalProduct()` (antes `addNewProduct`) guarda productos en `localStorage`.
-  - Soporta subida de imagen por archivo y guarda como Data URL (offline).
-  - Genera imágenes placeholder SVG automáticas cuando no hay foto.
-  - `window.debugProducts()` para inspección rápida en consola.
+El proyecto ha sido completamente rediseñado para mayor estabilidad y compatibilidad (especialmente con Firefox):
 
-- Gestión de transacciones y anulación: `js/transactions.js`
-  - Guarda/lee transacciones en `localStorage` (clave `transactions`).
-  - `voidTransaction(id)` marca `cancelled: true`, guarda `cancelledAt` y restaura stock local si la transacción tiene `items`.
+- **`js/app.js`**: Orquestador principal y punto de entrada.
+- **`js/api.js`**: Capa de Acceso a Datos (DAL) que centraliza la comunicación con Supabase.
+- **`js/supabase.js`**: Inicialización segura del cliente Supabase desde CDN (ESM).
+- **`js/state.js`**: Gestión de estado global centralizada.
+- **`js/auth.js`**: Sistema de autenticación local (admin/cajero).
+- **`js/ui.js`**: Lógica de renderizado y manipulación del DOM.
+- **`js/cart.js`**: Lógica de carrito, búsqueda y procesamiento de ventas.
+- **`js/ai.js`**: Módulo de Inteligencia de Negocio para alertas de stock y análisis de ventas.
+- **`js/config.js`**: Configuración global, constantes y usuarios válidos.
 
-- Cambios en la UI (`index.html`)
-  - Mini-panel IA en Dashboard y popup `Inteligencia del Negocio` ya integrado.
-  - Formulario de nuevo producto aceptando imagen con preview.
-  - Inclusión de `js/products.js`, `js/transactions.js`, `js/ai.js` en el orden correcto.
-  - Favicon inline SVG añadido para evitar 404 en GitHub Pages.
+## Características Principales
 
-Notas técnicas y comandos útiles
+- **Arquitectura ESM**: Uso de módulos de JavaScript nativos para evitar conflictos de variables globales.
+- **Sincronización con Supabase**: Persistencia en tiempo real de productos, ventas, proveedores y configuraciones.
+- **Inteligencia de Negocio (IA)**: Análisis automático de tendencias de ventas y alertas preventivas.
+- **Sistema de Promociones**: Soporte para reglas "Llevá X, Pagá Y" y descuentos por medio de pago.
+- **Gestión de Caja**: Control de apertura, ingresos y egresos manuales.
+- **Modo Oscuro**: Interfaz moderna con soporte para temas dinámicos.
 
-- Ejecutar servidor local (recomendado para evitar problemas `file://`):
-```powershell
-cd C:\Users\anabe\Desktop\proyec
-python -m http.server 8000
-# luego abrir http://localhost:8000 en el navegador
-```
+## Instalación y Uso Local
 
-- Debug y utilidades en la consola del navegador:
-  - `debugProducts()` → lista productos desde `localStorage` y muestra si tienen imagen.
-  - `assignPlaceholdersToAll()` → genera placeholders para productos sin imagen.
-  - `analyzeBusinessData()` → fuerza el análisis IA y actualiza UI.
-  - `window.voidTransaction('TK-12345')` → anula ticket por ID.
+Para ejecutar el proyecto localmente y evitar problemas de CORS o restricciones del protocolo `file://`, se recomienda usar un servidor web simple:
 
-Cómo personalizar reglas IA
-- Editar valores por defecto en `js/ai.js`:
-  - `STOCK_MIN` → stock mínimo
-  - `ANALYSIS_DAYS` → ventana de análisis
-  - `NO_MOVE_DAYS` → días para considerar sin movimiento
-  - O usar en consola `window.aiConfig.setStockMin(10)` etc.
+1. Clonar el repositorio.
+2. Abrir una terminal en el directorio del proyecto.
+3. Ejecutar un servidor (ejemplo con `npx`):
+   ```bash
+   npx http-server -p 8080
+   ```
+4. Acceder a `http://localhost:8080`.
 
-Sobre sincronización remota (Supabase)
-- Actualmente todo está en `localStorage` y variables globales para funcionar offline.
-- Si quieres sincronizar con Supabase, es recomendable:
-  1) Comprobar si el `code` del producto existe antes de insertar (evitar duplicados)
-  2) Usar `upsert` o `patch` para evitar errores de `unique constraint`
-  Puedo añadir esa integración si me das la estructura exacta de las tablas y el cliente (ya existe `supabase-client.js` en el proyecto).
+### Credenciales de Demo
+- **Administrador**: `admin` / `1234`
+- **Cajero**: `cajero` / `1234`
 
-Commit final y estado del repo
-- Todos los cambios relevantes fueron commiteados y pusheados a `origin/main`.
+## Siguientes Pasos
+- [ ] Implementar reportes gráficos avanzados (Charts.js).
+- [ ] Agregar soporte para múltiples sucursales con selector inicial.
+- [ ] Integrar facturación electrónica oficial.
 
-Siguientes pasos sugeridos (elige uno):
-- Probar la app en `http://localhost:8000` y ejecutar `debugProducts()`.
-- Añadir sincronización con Supabase (upsert) para productos y anulaciones.
-- Mejorar UI de historial para mostrar items por transacción y permitir revertir anulaciones.
-
-Si quieres que yo realice alguno de esos pasos, dime cuál y lo implemento.
+---
+*Mantenido por Antigravity AI*
